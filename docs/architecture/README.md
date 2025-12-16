@@ -6,6 +6,23 @@ This directory contains technical architecture specifications for the Community 
 
 ## 📋 Documents
 
+### Module Architecture (SPARC Phase 3)
+
+| Module | Document | Lines | Status |
+|--------|----------|-------|--------|
+| M1 | [Authentication Architecture](./m1-auth-architecture.md) | 1,881 | ✅ DRAFT |
+| M2 | [Profiles & Media Architecture](./m2-profiles-architecture.md) | 1,907 | ✅ DRAFT |
+| M3 | [Posts & Feed Architecture](./feed-performance-optimization.md) | 2,960 | ✅ Complete |
+| M4 | [Comments Architecture](./m4-comments-architecture.md) | 1,825 | ✅ DRAFT |
+| M5 | [Groups & RBAC Architecture](./m5-groups-rbac-architecture.md) | 1,556 | ✅ DRAFT |
+| M6 | [Social Graph Architecture](./m6-social-graph-architecture.md) | 1,953 | ✅ DRAFT |
+| M7 | [Notifications & WebSocket Architecture](./m7-notifications-architecture.md) | 1,409 | ✅ DRAFT |
+| M8 | [Admin & Security Architecture](./m8-admin-security-architecture.md) | 1,855 | ✅ DRAFT |
+
+**Total**: 15,346 lines of architecture documentation
+
+---
+
 ### Performance Optimization
 
 #### [Feed Performance Optimization Strategy](./feed-performance-optimization.md)
@@ -264,5 +281,5 @@ For questions or suggestions, open an issue or discussion on GitHub.
 
 ---
 
-**Last Updated**: 2025-12-04
-**Version**: 1.0
+**Last Updated**: 2025-12-16
+**Version**: 2.0 (SPARC Phase 3 Architecture Complete)
