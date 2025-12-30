@@ -1,0 +1,417 @@
+// Prisma Schema for Community Social Network
+// Version: 1.0.0
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ============================================================================
+// USER MANAGEMENT
+// ============================================================================
+
+model User {
+  id            String    @id @default(uuid()) @db.Uuid
+  email         String    @unique @db.VarChar(255)
+  username      String    @unique @db.VarChar(50)
+  passwordHash  String    @map("password_hash") @db.VarChar(255)
+  isActive      Boolean   @default(true) @map("is_active")
+  isVerified    Boolean   @default(false) @map("is_verified")
+  role          UserRole  @default(USER)
+  createdAt     DateTime  @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt     DateTime  @updatedAt @map("updated_at") @db.Timestamptz
+  lastLoginAt   DateTime? @map("last_login_at") @db.Timestamptz
+  deletedAt     DateTime? @map("deleted_at") @db.Timestamptz
+
+  // Relations
+  profile         UserProfile?
+  posts           Post[]
+  comments        Comment[]
+  postReactions   PostReaction[]
+  commentReactions CommentReaction[]
+  followers       Follow[]         @relation("Following")
+  following       Follow[]         @relation("Followers")
+  blockedUsers    Block[]          @relation("Blocker")
+  blockedBy       Block[]          @relation("Blocked")
+  groups          GroupMember[]
+  ownedGroups     Group[]          @relation("GroupOwner")
+  notifications   Notification[]
+  sessions        Session[]
+  refreshTokens   RefreshToken[]
+  auditLogs       AuditLog[]
+
+  @@index([email])
+  @@index([username])
+  @@index([createdAt])
+  @@index([isActive, deletedAt])
+  @@map("users")
+}
+
+model UserProfile {
+  id           String    @id @default(uuid()) @db.Uuid
+  userId       String    @unique @map("user_id") @db.Uuid
+  displayName  String?   @map("display_name") @db.VarChar(100)
+  bio          String?   @db.Text
+  avatarUrl    String?   @map("avatar_url") @db.VarChar(500)
+  coverUrl     String?   @map("cover_url") @db.VarChar(500)
+  location     String?   @db.VarChar(100)
+  website      String?   @db.VarChar(255)
+  dateOfBirth  DateTime? @map("date_of_birth") @db.Date
+  isPrivate    Boolean   @default(false) @map("is_private")
+  createdAt    DateTime  @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt    DateTime  @updatedAt @map("updated_at") @db.Timestamptz
+
+  // Relations
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("user_profiles")
+}
+
+enum UserRole {
+  USER
+  MODERATOR
+  ADMIN
+}
+
+// ============================================================================
+// POSTS & CONTENT
+// ============================================================================
+
+model Post {
+  id             String        @id @default(uuid()) @db.Uuid
+  authorId       String        @map("author_id") @db.Uuid
+  content        String        @db.Text
+  mediaUrls      String[]      @default([]) @map("media_urls")
+  visibility     PostVisibility @default(PUBLIC)
+  groupId        String?       @map("group_id") @db.Uuid
+  parentPostId   String?       @map("parent_post_id") @db.Uuid
+  reactionCount  Int           @default(0) @map("reaction_count")
+  commentCount   Int           @default(0) @map("comment_count")
+  shareCount     Int           @default(0) @map("share_count")
+  isEdited       Boolean       @default(false) @map("is_edited")
+  isPinned       Boolean       @default(false) @map("is_pinned")
+  createdAt      DateTime      @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt      DateTime      @updatedAt @map("updated_at") @db.Timestamptz
+  deletedAt      DateTime?     @map("deleted_at") @db.Timestamptz
+
+  // Relations
+  author     User           @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  group      Group?         @relation(fields: [groupId], references: [id], onDelete: SetNull)
+  parentPost Post?          @relation("PostReplies", fields: [parentPostId], references: [id], onDelete: SetNull)
+  replies    Post[]         @relation("PostReplies")
+  reactions  PostReaction[]
+  comments   Comment[]
+
+  @@index([authorId])
+  @@index([groupId])
+  @@index([parentPostId])
+  @@index([createdAt])
+  @@index([visibility, deletedAt])
+  @@map("posts")
+}
+
+enum PostVisibility {
+  PUBLIC
+  FOLLOWERS
+  GROUP
+  PRIVATE
+}
+
+model PostReaction {
+  id        String       @id @default(uuid()) @db.Uuid
+  postId    String       @map("post_id") @db.Uuid
+  userId    String       @map("user_id") @db.Uuid
+  type      ReactionType
+  createdAt DateTime     @default(now()) @map("created_at") @db.Timestamptz
+
+  // Relations
+  post Post @relation(fields: [postId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([postId, userId])
+  @@index([postId])
+  @@index([userId])
+  @@map("post_reactions")
+}
+
+enum ReactionType {
+  LIKE
+  LOVE
+  HAHA
+  WOW
+  SAD
+  ANGRY
+}
+
+// ============================================================================
+// COMMENTS
+// ============================================================================
+
+model Comment {
+  id              String    @id @default(uuid()) @db.Uuid
+  postId          String    @map("post_id") @db.Uuid
+  authorId        String    @map("author_id") @db.Uuid
+  parentCommentId String?   @map("parent_comment_id") @db.Uuid
+  content         String    @db.Text
+  reactionCount   Int       @default(0) @map("reaction_count")
+  replyCount      Int       @default(0) @map("reply_count")
+  isEdited        Boolean   @default(false) @map("is_edited")
+  createdAt       DateTime  @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt       DateTime  @updatedAt @map("updated_at") @db.Timestamptz
+  deletedAt       DateTime? @map("deleted_at") @db.Timestamptz
+
+  // Relations
+  post          Post               @relation(fields: [postId], references: [id], onDelete: Cascade)
+  author        User               @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  parentComment Comment?           @relation("CommentReplies", fields: [parentCommentId], references: [id], onDelete: SetNull)
+  replies       Comment[]          @relation("CommentReplies")
+  reactions     CommentReaction[]
+
+  @@index([postId])
+  @@index([authorId])
+  @@index([parentCommentId])
+  @@index([createdAt])
+  @@map("comments")
+}
+
+model CommentReaction {
+  id        String       @id @default(uuid()) @db.Uuid
+  commentId String       @map("comment_id") @db.Uuid
+  userId    String       @map("user_id") @db.Uuid
+  type      ReactionType
+  createdAt DateTime     @default(now()) @map("created_at") @db.Timestamptz
+
+  // Relations
+  comment Comment @relation(fields: [commentId], references: [id], onDelete: Cascade)
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([commentId, userId])
+  @@index([commentId])
+  @@index([userId])
+  @@map("comment_reactions")
+}
+
+// ============================================================================
+// GROUPS
+// ============================================================================
+
+model Group {
+  id           String         @id @default(uuid()) @db.Uuid
+  name         String         @db.VarChar(100)
+  slug         String         @unique @db.VarChar(100)
+  description  String?        @db.Text
+  coverUrl     String?        @map("cover_url") @db.VarChar(500)
+  avatarUrl    String?        @map("avatar_url") @db.VarChar(500)
+  ownerId      String         @map("owner_id") @db.Uuid
+  privacy      GroupPrivacy   @default(PUBLIC)
+  memberCount  Int            @default(0) @map("member_count")
+  postCount    Int            @default(0) @map("post_count")
+  isActive     Boolean        @default(true) @map("is_active")
+  createdAt    DateTime       @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt    DateTime       @updatedAt @map("updated_at") @db.Timestamptz
+  deletedAt    DateTime?      @map("deleted_at") @db.Timestamptz
+
+  // Relations
+  owner   User          @relation("GroupOwner", fields: [ownerId], references: [id], onDelete: Cascade)
+  members GroupMember[]
+  posts   Post[]
+
+  @@index([ownerId])
+  @@index([slug])
+  @@index([privacy, isActive])
+  @@index([createdAt])
+  @@map("groups")
+}
+
+enum GroupPrivacy {
+  PUBLIC
+  PRIVATE
+  SECRET
+}
+
+model GroupMember {
+  id        String          @id @default(uuid()) @db.Uuid
+  groupId   String          @map("group_id") @db.Uuid
+  userId    String          @map("user_id") @db.Uuid
+  role      GroupMemberRole @default(MEMBER)
+  joinedAt  DateTime        @default(now()) @map("joined_at") @db.Timestamptz
+  updatedAt DateTime        @updatedAt @map("updated_at") @db.Timestamptz
+
+  // Relations
+  group Group @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([groupId, userId])
+  @@index([groupId])
+  @@index([userId])
+  @@index([role])
+  @@map("group_members")
+}
+
+enum GroupMemberRole {
+  MEMBER
+  MODERATOR
+  ADMIN
+}
+
+// ============================================================================
+// SOCIAL CONNECTIONS
+// ============================================================================
+
+model Follow {
+  id          String       @id @default(uuid()) @db.Uuid
+  followerId  String       @map("follower_id") @db.Uuid
+  followingId String       @map("following_id") @db.Uuid
+  status      FollowStatus @default(ACCEPTED)
+  createdAt   DateTime     @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt   DateTime     @updatedAt @map("updated_at") @db.Timestamptz
+
+  // Relations
+  follower  User @relation("Followers", fields: [followerId], references: [id], onDelete: Cascade)
+  following User @relation("Following", fields: [followingId], references: [id], onDelete: Cascade)
+
+  @@unique([followerId, followingId])
+  @@index([followerId])
+  @@index([followingId])
+  @@index([status])
+  @@map("follows")
+}
+
+enum FollowStatus {
+  PENDING
+  ACCEPTED
+  REJECTED
+}
+
+model Block {
+  id        String   @id @default(uuid()) @db.Uuid
+  blockerId String   @map("blocker_id") @db.Uuid
+  blockedId String   @map("blocked_id") @db.Uuid
+  reason    String?  @db.VarChar(255)
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz
+
+  // Relations
+  blocker User @relation("Blocker", fields: [blockerId], references: [id], onDelete: Cascade)
+  blocked User @relation("Blocked", fields: [blockedId], references: [id], onDelete: Cascade)
+
+  @@unique([blockerId, blockedId])
+  @@index([blockerId])
+  @@index([blockedId])
+  @@map("blocks")
+}
+
+// ============================================================================
+// NOTIFICATIONS
+// ============================================================================
+
+model Notification {
+  id          String           @id @default(uuid()) @db.Uuid
+  userId      String           @map("user_id") @db.Uuid
+  type        NotificationType
+  title       String           @db.VarChar(255)
+  body        String           @db.Text
+  data        Json?            @db.JsonB
+  isRead      Boolean          @default(false) @map("is_read")
+  readAt      DateTime?        @map("read_at") @db.Timestamptz
+  createdAt   DateTime         @default(now()) @map("created_at") @db.Timestamptz
+
+  // Relations
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([isRead])
+  @@index([createdAt])
+  @@index([type])
+  @@map("notifications")
+}
+
+enum NotificationType {
+  FOLLOW_REQUEST
+  FOLLOW_ACCEPTED
+  POST_LIKE
+  POST_COMMENT
+  COMMENT_REPLY
+  COMMENT_LIKE
+  GROUP_INVITE
+  GROUP_JOIN_REQUEST
+  GROUP_POST
+  MENTION
+  SYSTEM
+}
+
+// ============================================================================
+// AUTHENTICATION & SESSIONS
+// ============================================================================
+
+model Session {
+  id           String    @id @default(uuid()) @db.Uuid
+  userId       String    @map("user_id") @db.Uuid
+  token        String    @unique @db.VarChar(500)
+  userAgent    String?   @map("user_agent") @db.VarChar(500)
+  ipAddress    String?   @map("ip_address") @db.VarChar(45)
+  isValid      Boolean   @default(true) @map("is_valid")
+  expiresAt    DateTime  @map("expires_at") @db.Timestamptz
+  createdAt    DateTime  @default(now()) @map("created_at") @db.Timestamptz
+  lastActiveAt DateTime  @default(now()) @map("last_active_at") @db.Timestamptz
+
+  // Relations
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([token])
+  @@index([expiresAt])
+  @@index([isValid])
+  @@map("sessions")
+}
+
+model RefreshToken {
+  id          String    @id @default(uuid()) @db.Uuid
+  userId      String    @map("user_id") @db.Uuid
+  token       String    @unique @db.VarChar(500)
+  family      String    @db.VarChar(100)
+  isRevoked   Boolean   @default(false) @map("is_revoked")
+  expiresAt   DateTime  @map("expires_at") @db.Timestamptz
+  createdAt   DateTime  @default(now()) @map("created_at") @db.Timestamptz
+  revokedAt   DateTime? @map("revoked_at") @db.Timestamptz
+
+  // Relations
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([token])
+  @@index([family])
+  @@index([expiresAt])
+  @@map("refresh_tokens")
+}
+
+// ============================================================================
+// AUDIT & LOGGING
+// ============================================================================
+
+model AuditLog {
+  id         String   @id @default(uuid()) @db.Uuid
+  userId     String?  @map("user_id") @db.Uuid
+  action     String   @db.VarChar(100)
+  entityType String   @map("entity_type") @db.VarChar(50)
+  entityId   String?  @map("entity_id") @db.Uuid
+  oldValue   Json?    @map("old_value") @db.JsonB
+  newValue   Json?    @map("new_value") @db.JsonB
+  ipAddress  String?  @map("ip_address") @db.VarChar(45)
+  userAgent  String?  @map("user_agent") @db.VarChar(500)
+  metadata   Json?    @db.JsonB
+  createdAt  DateTime @default(now()) @map("created_at") @db.Timestamptz
+
+  // Relations
+  user User? @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([userId])
+  @@index([action])
+  @@index([entityType, entityId])
+  @@index([createdAt])
+  @@map("audit_logs")
+}
