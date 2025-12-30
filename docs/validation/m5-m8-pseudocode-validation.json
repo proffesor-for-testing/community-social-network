@@ -1,0 +1,143 @@
+{
+  "validationReport": {
+    "title": "M5-M8 Pseudocode Validation Report",
+    "version": "1.0.0",
+    "generatedAt": "2025-12-30T17:20:00Z",
+    "generatedBy": "QE Requirements Validator Agent",
+    "methodology": "SPARC Phase 2 Pseudocode vs Phase 1 Specification Cross-Validation",
+    "overallAssessment": {
+      "totalModules": 4,
+      "averageCompleteness": 89.5,
+      "verdict": "READY_FOR_IMPLEMENTATION",
+      "summary": "Modules M5-M8 demonstrate strong alignment with specifications. M5 Groups/RBAC shows excellent coverage at 93%, M6 Social Graph at 90%, M7 Notifications at 87%, and M8 Admin Security at 88%. Key gaps identified are around WebSocket failover details and some advanced security features."
+    }
+  },
+  "modules": {
+    "M5_Groups_RBAC": {
+      "moduleName": "M5: Groups & Communities",
+      "pseudocodeFile": "/docs/pseudocode/m5-groups-rbac-pseudocode.md",
+      "specificationSources": [
+        "/docs/specifications/groups-rbac-permission-matrix.md",
+        "/docs/specifications/SPARC_SPECIFICATION.md (Section 4.3, M5)"
+      ],
+      "completenessPercentage": 93,
+      "status": "EXCELLENT",
+      "requirements": {
+        "functional": [
+          {"id": "FR-M5-001", "requirement": "Group CRUD operations", "addressed": true, "notes": "CreateGroup, UpdateGroup, DeleteGroup all documented with transaction handling"},
+          {"id": "FR-M5-002", "requirement": "3-tier role hierarchy (Owner > Moderator > Member)", "addressed": true, "notes": "Permission inheritance model documented"},
+          {"id": "FR-M5-003", "requirement": "Permission matrix (60+ scenarios)", "addressed": true, "notes": "Comprehensive permission checks for all actions"},
+          {"id": "FR-M5-004", "requirement": "Group privacy settings (public/private)", "addressed": true, "notes": "Join request workflow for private groups"},
+          {"id": "FR-M5-005", "requirement": "Member management operations", "addressed": true, "notes": "Add, remove, promote, demote members"},
+          {"id": "FR-M5-006", "requirement": "Group discovery and search", "addressed": true, "notes": "Category filtering, trending groups"}
+        ],
+        "security": [
+          {"id": "NFR-SEC-M5-001", "requirement": "Authorization middleware", "addressed": true, "notes": "checkGroupPermission algorithm documented"},
+          {"id": "NFR-SEC-M5-002", "requirement": "Audit logging for admin actions", "addressed": true, "notes": "All role changes logged"}
+        ]
+      },
+      "gaps": [
+        {"id": "GAP-M5-001", "severity": "LOW", "description": "Group archival workflow not explicitly detailed", "recommendation": "Add ArchiveGroup algorithm"},
+        {"id": "GAP-M5-002", "severity": "LOW", "description": "Group data export for GDPR not documented", "recommendation": "Add ExportGroupData algorithm"}
+      ],
+      "additions": [
+        {"id": "ADD-M5-001", "type": "ENHANCEMENT", "description": "Permission caching with 5-minute TTL", "assessment": "POSITIVE - Performance optimization"},
+        {"id": "ADD-M5-002", "type": "ENHANCEMENT", "description": "Batch permission checks", "assessment": "POSITIVE - Reduces N+1 queries"}
+      ]
+    },
+    "M6_Social_Graph": {
+      "moduleName": "M6: Social Features",
+      "pseudocodeFile": "/docs/pseudocode/m6-social-graph-pseudocode.md",
+      "specificationSources": [
+        "/docs/specifications/social-graph-specification.md",
+        "/docs/specifications/SPARC_SPECIFICATION.md (Section 4.3, M6)"
+      ],
+      "completenessPercentage": 90,
+      "status": "VERY_GOOD",
+      "requirements": {
+        "functional": [
+          {"id": "FR-M6-001", "requirement": "Follow/unfollow operations", "addressed": true, "notes": "FollowUser, UnfollowUser with status tracking"},
+          {"id": "FR-M6-002", "requirement": "Follow approval for private accounts", "addressed": true, "notes": "Pending status workflow documented"},
+          {"id": "FR-M6-003", "requirement": "Block/unblock users", "addressed": true, "notes": "Bidirectional visibility blocking"},
+          {"id": "FR-M6-004", "requirement": "Privacy settings (public/private/friends-only)", "addressed": true, "notes": "Profile visibility controls"},
+          {"id": "FR-M6-005", "requirement": "Follower/following counts", "addressed": true, "notes": "Denormalized counters with triggers"}
+        ],
+        "performance": [
+          {"id": "NFR-PERF-M6-001", "requirement": "Follow operations < 100ms", "addressed": true, "notes": "Target documented"},
+          {"id": "NFR-PERF-M6-002", "requirement": "Support 1M follow relationships", "addressed": true, "notes": "Indexing strategy documented"}
+        ]
+      },
+      "gaps": [
+        {"id": "GAP-M6-001", "severity": "MEDIUM", "description": "Mutual friends algorithm not detailed", "recommendation": "Add GetMutualConnections algorithm"},
+        {"id": "GAP-M6-002", "severity": "LOW", "description": "Suggested follows algorithm incomplete", "recommendation": "Enhance with collaborative filtering"}
+      ],
+      "additions": [
+        {"id": "ADD-M6-001", "type": "ENHANCEMENT", "description": "Graph-based friend suggestions", "assessment": "POSITIVE - Improves engagement"}
+      ]
+    },
+    "M7_Notifications": {
+      "moduleName": "M7: Notifications",
+      "pseudocodeFile": "/docs/pseudocode/m7-notifications-pseudocode.md",
+      "specificationSources": [
+        "/docs/specifications/notifications-websocket-specification.md",
+        "/docs/specifications/SPARC_SPECIFICATION.md (Section 4.3, M7)"
+      ],
+      "completenessPercentage": 87,
+      "status": "GOOD",
+      "requirements": {
+        "functional": [
+          {"id": "FR-M7-001", "requirement": "Notification types (mention, like, comment, follow)", "addressed": true, "notes": "All notification types documented"},
+          {"id": "FR-M7-002", "requirement": "Real-time delivery via WebSocket", "addressed": true, "notes": "Socket.io integration documented"},
+          {"id": "FR-M7-003", "requirement": "Notification preferences", "addressed": true, "notes": "Per-type enable/disable settings"},
+          {"id": "FR-M7-004", "requirement": "Mark as read/unread", "addressed": true, "notes": "Individual and bulk operations"},
+          {"id": "FR-M7-005", "requirement": "Notification aggregation", "addressed": true, "notes": "Grouping similar notifications"}
+        ],
+        "scalability": [
+          {"id": "NFR-SCALE-M7-001", "requirement": "10,000 concurrent connections per server", "addressed": true, "notes": "Redis adapter for horizontal scaling"},
+          {"id": "NFR-SCALE-M7-002", "requirement": "At-least-once delivery guarantee", "addressed": true, "notes": "Deduplication with notification_id"}
+        ]
+      },
+      "gaps": [
+        {"id": "GAP-M7-001", "severity": "MEDIUM", "description": "WebSocket failover/reconnection strategy incomplete", "recommendation": "Add detailed exponential backoff algorithm"},
+        {"id": "GAP-M7-002", "severity": "MEDIUM", "description": "Push notification integration not documented", "recommendation": "Add Firebase/APNs integration for mobile"},
+        {"id": "GAP-M7-003", "severity": "LOW", "description": "Email digest notifications not detailed", "recommendation": "Add daily/weekly digest algorithm"}
+      ],
+      "additions": [
+        {"id": "ADD-M7-001", "type": "ENHANCEMENT", "description": "Bull Queue for reliable processing", "assessment": "POSITIVE - Ensures delivery under load"}
+      ]
+    },
+    "M8_Admin_Security": {
+      "moduleName": "M8: Admin & Moderation",
+      "pseudocodeFile": "/docs/pseudocode/m8-admin-security-pseudocode.md",
+      "specificationSources": [
+        "/docs/specifications/admin-security-specification.md",
+        "/docs/specifications/SPARC_SPECIFICATION.md (Section 4.3, M8)"
+      ],
+      "completenessPercentage": 88,
+      "status": "GOOD",
+      "requirements": {
+        "functional": [
+          {"id": "FR-M8-001", "requirement": "Admin role hierarchy (Super Admin > Admin > Moderator)", "addressed": true, "notes": "3-tier hierarchy documented"},
+          {"id": "FR-M8-002", "requirement": "Content moderation tools", "addressed": true, "notes": "Report handling, content removal"},
+          {"id": "FR-M8-003", "requirement": "User management (warn, suspend, ban)", "addressed": true, "notes": "Progressive discipline workflow"},
+          {"id": "FR-M8-004", "requirement": "Audit logging", "addressed": true, "notes": "All admin actions logged"}
+        ],
+        "security": [
+          {"id": "NFR-SEC-M8-001", "requirement": "2FA mandatory for admin accounts", "addressed": true, "notes": "TOTP with backup codes documented"},
+          {"id": "NFR-SEC-M8-002", "requirement": "IP whitelisting for super admins", "addressed": true, "notes": "Whitelist management documented"},
+          {"id": "NFR-SEC-M8-003", "requirement": "4-hour session timeout", "addressed": true, "notes": "Single-session enforcement"},
+          {"id": "NFR-SEC-M8-004", "requirement": "Rate limiting on admin endpoints", "addressed": true, "notes": "Stricter limits than user endpoints"}
+        ]
+      },
+      "gaps": [
+        {"id": "GAP-M8-001", "severity": "MEDIUM", "description": "2FA recovery via Super Admin not fully detailed", "recommendation": "Add identity verification workflow"},
+        {"id": "GAP-M8-002", "severity": "LOW", "description": "Admin activity analytics dashboard not documented", "recommendation": "Add metrics aggregation algorithm"},
+        {"id": "GAP-M8-003", "severity": "LOW", "description": "Automated threat detection incomplete", "recommendation": "Add ML-based anomaly detection placeholder"}
+      ],
+      "additions": [
+        {"id": "ADD-M8-001", "type": "ENHANCEMENT", "description": "Content auto-flagging queue", "assessment": "POSITIVE - Scales moderation"},
+        {"id": "ADD-M8-002", "type": "ENHANCEMENT", "description": "Moderator action attribution", "assessment": "POSITIVE - Accountability"}
+      ]
+    }
+  }
+}

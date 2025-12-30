@@ -1,18 +1,102 @@
-.DS_Store
-# Removed Windows wrapper files per user request
-hive-mind-prompt-*.txt
-.agentic-qe/
-.claude/
-logs/
+# Dependencies
+node_modules/
+.npm
+.yarn
 
-# Claude Flow generated files
+# Build outputs
+dist/
+build/
+*.js.map
+
+# Environment files
+.env
+.env.local
+.env.*.local
+
+# IDE and editors
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+.project
+.classpath
+.settings/
+
+# Operating System
+.DS_Store
+Thumbs.db
+*.log
+
+# Test coverage
+coverage/
+.nyc_output/
+*.lcov
+
+# Debug logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Prisma
+prisma/migrations/**/migration_lock.toml
+
+# Generated files
+*.tsbuildinfo
+.eslintcache
+
+# Temporary files
+tmp/
+temp/
+*.tmp
+*.temp
+
+# Uploads (local development)
+uploads/
+media/
+
+# Logs
+logs/
+*.log
+pids/
+*.pid
+*.seed
+
+# Documentation (generated)
+docs/api/
+
+# Lock files - keep package-lock.json but ignore others
+yarn.lock
+pnpm-lock.yaml
+
+# Secrets and credentials (additional safety)
+*.pem
+*.key
+credentials.json
+secrets.json
+
+# Database
+*.sqlite
+*.sqlite3
+*.db
+*.db-journal
+*.db-wal
+*.sqlite-journal
+*.sqlite-wal
+
+# Memory stores
+memory/
+.claude-flow/
+.hive-mind/
+.agentic-qe/
+
+# Claude configuration
+.claude/
 .claude/settings.local.json
 .mcp.json
 claude-flow.config.json
 .swarm/
-.hive-mind/
-.claude-flow/
-memory/
 coordination/
 memory/claude-flow-data.json
 memory/sessions/*
@@ -22,13 +106,18 @@ memory/agents/*
 coordination/memory_bank/*
 coordination/subtasks/*
 coordination/orchestration/*
-*.db
-*.db-journal
-*.db-wal
-*.sqlite
-*.sqlite-journal
-*.sqlite-wal
-claude-flow
-# Removed Windows wrapper files per user request
+
+# Generated prompts
 hive-mind-prompt-*.txt
 
+# Redis dump
+dump.rdb
+
+# PM2
+.pm2/
+
+# Runtime data
+pids
+*.pid
+*.seed
+*.pid.lock
