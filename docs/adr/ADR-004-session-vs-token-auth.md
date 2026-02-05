@@ -131,6 +131,44 @@ Client                    API Server                    Database
    │                           │                            │
 ```
 
+### Logout Flow
+
+```
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                           Logout Flow                                       │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+Client                    API Server                    Database
+   │                           │                            │
+   │  POST /api/v1/auth/logout │                            │
+   │  Authorization: Bearer {accessToken}                   │
+   │  Cookie: refreshToken     │                            │
+   ├──────────────────────────►│                            │
+   │                           │  Verify access token       │
+   │                           ├────────┐                   │
+   │                           │        │                   │
+   │                           │◄───────┘                   │
+   │                           │                            │
+   │                           │  Blacklist access token    │
+   │                           │  (by jti claim)            │
+   │                           ├───────────────────────────►│
+   │                           │                            │
+   │                           │  Revoke refresh token      │
+   │                           │  (set revoked_at)          │
+   │                           ├───────────────────────────►│
+   │                           │                            │
+   │  200 OK                   │                            │
+   │  Set-Cookie: refresh_token=; Max-Age=0                 │
+   │◄──────────────────────────┤                            │
+   │                           │                            │
+```
+
+**Logout steps:**
+1. Verify the access token from the `Authorization` header
+2. Add the access token's `jti` to the blacklist (DB + Redis) with `expires_at` matching the token's expiration
+3. Revoke the corresponding refresh token in the `refresh_tokens` table (set `revoked_at`)
+4. Clear the refresh token cookie by setting `Max-Age=0`
+
 ### Token Configuration
 
 ```typescript
@@ -148,6 +186,9 @@ const jwtConfig = {
     issuer: 'community-social-network',
     audience: 'csn-refresh',
   },
+  // Maximum concurrent refresh tokens (active devices) per user.
+  // When exceeded, the oldest refresh token is revoked automatically.
+  maxActiveRefreshTokensPerUser: 5,
 };
 
 // Access Token Payload
@@ -155,6 +196,7 @@ interface AccessTokenPayload {
   sub: string;          // User ID
   email: string;        // User email
   role: string;         // User role (user, admin)
+  jti: string;          // Token ID (for blacklisting)
   iat: number;          // Issued at
   exp: number;          // Expiration
   iss: string;          // Issuer
@@ -183,7 +225,7 @@ const refreshTokenCookie = {
   sameSite: 'strict',       // CSRF protection
   path: '/api/v1/auth',     // Only sent to auth endpoints
   maxAge: 7 * 24 * 60 * 60 * 1000,  // 7 days
-  domain: '.example.com',   // Shared across subdomains
+  domain: process.env.COOKIE_DOMAIN || 'localhost',  // Environment-specific
 };
 ```
 
@@ -430,6 +472,53 @@ const authRateLimits = {
     max: 10,                    // 10 refreshes
     message: 'Too many refresh attempts',
   },
+};
+```
+
+### 5. RSA Key Rotation
+
+Key rotation allows replacing the signing keypair without downtime by maintaining a dual-key overlap period.
+
+**Rotation steps:**
+
+1. **Generate new keypair**: Create a new RSA 2048-bit private/public key pair in a secure offline environment.
+2. **Deploy new public key**: Add the new public key to all API server instances. The verification middleware must accept tokens signed by either the old or the new public key during the overlap period.
+3. **Switch signing to new private key**: Update the signing configuration so all newly issued tokens (access and refresh) are signed with the new private key.
+4. **Retire old public key**: After the maximum access token lifetime has elapsed (15 minutes), remove the old public key from verification. All tokens signed with the old key will have expired by this point.
+
+**No downtime is required.** During the overlap window both public keys are trusted for verification, so tokens signed by the old key remain valid until they naturally expire.
+
+```typescript
+// Key rotation config
+const keyRotationConfig = {
+  // Both keys accepted during overlap period
+  verificationKeys: [
+    { kid: 'key-2025-v2', publicKey: process.env.JWT_PUBLIC_KEY_CURRENT },
+    { kid: 'key-2025-v1', publicKey: process.env.JWT_PUBLIC_KEY_PREVIOUS },
+  ],
+  // Only current key used for signing
+  signingKey: {
+    kid: 'key-2025-v2',
+    privateKey: process.env.JWT_PRIVATE_KEY_CURRENT,
+  },
+  // Remove previous key after max token lifetime
+  overlapPeriod: '15m',
+};
+```
+
+### 6. Password Change Token Invalidation
+
+When a user changes their password, **all existing refresh tokens for that user must be revoked** by setting `revoked_at` on every row in the `refresh_tokens` table for that `user_id`. Additionally, a best-effort blacklist of the user's current access token `jti` should be performed so that the session is terminated as quickly as possible (within the 15-minute access token window at most).
+
+```typescript
+const onPasswordChange = async (userId: string, currentTokenJti?: string) => {
+  // Revoke ALL refresh tokens for this user
+  await db.refreshTokens.revokeAllForUser(userId);
+
+  // Blacklist the current access token if jti is available
+  if (currentTokenJti) {
+    await revokeAccessToken(currentTokenJti, accessTokenExpiresAt);
+  }
 };
 ```
 

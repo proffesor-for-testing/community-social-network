@@ -120,7 +120,7 @@ We define **7 bounded contexts** aligned with business capabilities, consolidati
 | `AccessToken` | Short-lived JWT for API access (15 min) |
 | `RefreshToken` | Long-lived token for session renewal (7 days) |
 
-**Database Tables**: `users`, `refresh_tokens`, `audit_logs`
+**Database Tables**: `users`, `refresh_tokens`
 
 **Key Invariants**:
 - A member must have a unique email
@@ -296,6 +296,8 @@ We define **7 bounded contexts** aligned with business capabilities, consolidati
 
 **Database Tables**: `admin_users`, `admin_two_factor`, `admin_sessions`, `admin_ip_whitelist`, `audit_logs`, `security_alerts`
 
+> **Note**: The `audit_logs` table is owned exclusively by the Admin Context. Other contexts emit audit events (ADR-009: `admin.audit_entry_created`) which are consumed by the Admin Context for persistence. This avoids shared table ownership across bounded contexts.
+
 **Key Invariants**:
 - 2FA is required for all admin users
 - Audit logs are immutable and partitioned
@@ -347,6 +349,28 @@ export class Timestamp {
   static now(): Timestamp;
   static from(date: Date): Timestamp;
 }
+```
+
+#### Shared Kernel Constraints
+
+The shared kernel MUST remain minimal. Adding new value objects to the shared kernel requires:
+1. Justification that the concept is truly shared across 3+ contexts
+2. Architecture team review
+3. Update to this ADR
+
+**Enforcement**: An architecture test verifies that `src/domain/shared/` contains ONLY the approved value objects:
+
+```typescript
+// tools/architecture-tests/shared-kernel.test.ts
+
+describe('Shared Kernel', () => {
+  it('contains only approved value objects', () => {
+    const sharedExports = getExportsFrom('src/domain/shared/');
+    const approved = ['UserId', 'Email', 'Timestamp', 'DomainEvent', 'AggregateRoot', 'ValueObject'];
+    const unapproved = sharedExports.filter(e => !approved.includes(e));
+    expect(unapproved).toHaveLength(0);
+  });
+});
 ```
 
 ## Consequences

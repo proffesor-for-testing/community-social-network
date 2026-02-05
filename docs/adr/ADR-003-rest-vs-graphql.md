@@ -272,6 +272,65 @@ interface ApiError {
 }
 ```
 
+### Error Code Catalog
+
+All API errors use machine-readable codes following the pattern `[CONTEXT]_[ERROR_TYPE]`:
+
+| Code | HTTP Status | Description | Context |
+|------|-------------|-------------|---------|
+| `AUTH_INVALID_CREDENTIALS` | 401 | Email or password incorrect | Identity |
+| `AUTH_ACCOUNT_LOCKED` | 423 | Account locked due to failed attempts | Identity |
+| `AUTH_TOKEN_EXPIRED` | 401 | Access token has expired | Identity |
+| `AUTH_TOKEN_REVOKED` | 401 | Token has been revoked/blacklisted | Identity |
+| `AUTH_REFRESH_INVALID` | 401 | Refresh token invalid or expired | Identity |
+| `AUTH_2FA_REQUIRED` | 403 | Two-factor authentication required | Admin |
+| `AUTH_2FA_INVALID` | 401 | Invalid 2FA code | Admin |
+| `VALIDATION_ERROR` | 400 | Request body failed validation | All |
+| `VALIDATION_FIELD_REQUIRED` | 400 | Required field missing | All |
+| `VALIDATION_FIELD_INVALID` | 400 | Field value does not meet constraints | All |
+| `RESOURCE_NOT_FOUND` | 404 | Requested resource does not exist | All |
+| `RESOURCE_ALREADY_EXISTS` | 409 | Resource with unique key already exists | All |
+| `CONTENT_TOO_LONG` | 400 | Post/comment exceeds maximum length | Content |
+| `CONTENT_EMPTY` | 400 | Post/comment content is empty | Content |
+| `CONTENT_MAX_DEPTH` | 400 | Comment exceeds max nesting depth (3 levels) | Content |
+| `SOCIAL_SELF_ACTION` | 400 | Cannot follow/block yourself | Social Graph |
+| `SOCIAL_ALREADY_FOLLOWING` | 409 | Already following this user | Social Graph |
+| `SOCIAL_BLOCKED` | 403 | Interaction blocked between users | Social Graph |
+| `SOCIAL_FOLLOW_PENDING` | 202 | Follow request pending approval | Social Graph |
+| `GROUP_NOT_MEMBER` | 403 | Not a member of this group | Community |
+| `GROUP_INSUFFICIENT_ROLE` | 403 | Insufficient role for this action | Community |
+| `GROUP_MAX_RULES` | 400 | Group has reached maximum rules (10) | Community |
+| `MEDIA_INVALID_TYPE` | 400 | File type not allowed | Profile |
+| `MEDIA_TOO_LARGE` | 400 | File exceeds maximum size (10 MB) | Profile |
+| `MEDIA_QUOTA_EXCEEDED` | 400 | Storage quota exceeded | Profile |
+| `RATE_LIMIT_EXCEEDED` | 429 | Rate limit exceeded for this endpoint | All |
+| `PERMISSION_DENIED` | 403 | Insufficient permissions | All |
+| `INTERNAL_ERROR` | 500 | Unexpected server error | All |
+
+### Cursor-Based Pagination
+
+The `cursor` value is an opaque, base64-encoded string containing the last item's sort key. Clients MUST NOT parse or construct cursors -- they should only use values returned by the API.
+
+```typescript
+// Cursor encoding (internal implementation)
+// Cursors are base64-encoded JSON: { id: string, createdAt: string }
+const encodeCursor = (id: string, createdAt: Date): string => {
+  return Buffer.from(JSON.stringify({ id, createdAt: createdAt.toISOString() })).toString('base64url');
+};
+
+const decodeCursor = (cursor: string): { id: string; createdAt: Date } => {
+  try {
+    const decoded = JSON.parse(Buffer.from(cursor, 'base64url').toString('utf-8'));
+    return { id: decoded.id, createdAt: new Date(decoded.createdAt) };
+  } catch {
+    throw new ValidationError('Invalid pagination cursor');
+  }
+};
+```
+
+Cursor pagination is used for: `/api/v1/feed`, `/api/v1/users/:id/posts`, `/api/v1/notifications`.
+Offset pagination is used for: all other list endpoints.
+
 ## Alternatives Considered
 
 ### Option A: GraphQL (Rejected)
@@ -425,6 +484,23 @@ const rateLimits = {
   '/api/v1/*/follow': { windowMs: 60 * 1000, max: 30 },
   '/api/v1/*/react': { windowMs: 60 * 1000, max: 60 },
 };
+
+// Per-user rate limiting (authenticated requests)
+// Applied in addition to per-IP limits
+const perUserRateLimits = {
+  // Write operations per authenticated user
+  'POST /api/v1/posts': { windowMs: 60 * 1000, max: 5 },        // 5 posts per minute
+  'POST /api/v1/*/comments': { windowMs: 60 * 1000, max: 15 },  // 15 comments per minute
+  'POST /api/v1/*/follow': { windowMs: 60 * 1000, max: 20 },    // 20 follows per minute
+  'POST /api/v1/*/react': { windowMs: 60 * 1000, max: 30 },     // 30 reactions per minute
+  'POST /api/v1/groups': { windowMs: 3600 * 1000, max: 5 },     // 5 groups per hour
+};
+
+// Rate limit response headers
+// X-RateLimit-Limit: Maximum requests allowed
+// X-RateLimit-Remaining: Requests remaining in window
+// X-RateLimit-Reset: UTC epoch time when window resets
+// Retry-After: Seconds until rate limit resets (only on 429)
 ```
 
 ## References

@@ -145,7 +145,9 @@ export class Member {
     }
 
     this._failedLoginCount = 0;
-    this.addDomainEvent(new MemberAuthenticatedEvent(this._id));
+    // MemberAuthenticatedEvent is raised at application layer
+    // where HTTP context (ipAddress, userAgent) is available
+    this.addDomainEvent(new MemberAuthenticationSucceededEvent(this._id));
     return true;
   }
 
@@ -165,9 +167,11 @@ export class Member {
 }
 ```
 
+> **Note**: `MemberAuthenticationSucceededEvent` is a domain-level event containing only the `memberId`. The application layer handler enriches this into a `MemberAuthenticatedEvent` (ADR-009) that includes `ipAddress` and `userAgent` from the HTTP context.
+
 **Invariants**:
 - Email must be unique (enforced at repository level)
-- Password must meet complexity requirements (8+ chars, mixed case, number)
+- Password must meet complexity requirements: minimum 12 characters, at least one uppercase letter, one lowercase letter, one digit, and one special character (`!@#$%^&*()_+-=[]{}|;:,.<>?`). Maximum 128 characters.
 - Failed login count triggers 15-minute lockout at 5 attempts
 - Suspended members cannot authenticate
 
@@ -213,6 +217,9 @@ export class Profile {
     this._displayName = name;
     this.addDomainEvent(new ProfileUpdatedEvent(this._id, { displayName: name }));
   }
+
+  // Profanity detection uses a curated word list (src/domain/shared/filters/profanity-list.ts)
+  // with Levenshtein distance matching (threshold: 1) for common evasion patterns
 
   setAvatar(mediaId: AvatarId): void {
     this._avatar = mediaId;
@@ -391,6 +398,46 @@ export class Discussion {
 - Comments have their own lifecycle
 - Comments can be independently moderated
 - Loading all comments with a post would be too expensive
+
+##### Reaction Aggregate
+
+```typescript
+// src/domain/content/aggregates/Reaction.ts
+
+export class Reaction {
+  private readonly _id: ReactionId;
+  private readonly _targetType: 'publication' | 'discussion';
+  private readonly _targetId: PublicationId | DiscussionId;
+  private readonly _memberId: MemberId;
+  private _type: ReactionType;  // 'like' | 'love' | 'laugh' | 'wow' | 'sad' | 'angry'
+  private _createdAt: Timestamp;
+
+  static create(
+    id: ReactionId,
+    targetType: 'publication' | 'discussion',
+    targetId: PublicationId | DiscussionId,
+    memberId: MemberId,
+    type: ReactionType
+  ): Reaction {
+    const reaction = new Reaction(id, targetType, targetId, memberId, type);
+    reaction.addDomainEvent(new ReactionAddedEvent(targetType, targetId.value, memberId.value, type.value));
+    return reaction;
+  }
+
+  changeType(newType: ReactionType): void {
+    this._type = newType;
+    this.addDomainEvent(new ReactionChangedEvent(this._id.value, newType.value));
+  }
+
+  remove(): void {
+    this.addDomainEvent(new ReactionRemovedEvent(this._targetType, this._targetId.value, this._memberId.value));
+  }
+}
+```
+
+**Invariants**:
+- One reaction per member per target (enforced at repository level)
+- Reaction type must be from allowed set
 
 ---
 
@@ -694,6 +741,38 @@ export class Administrator {
 ---
 
 ### Aggregate Design Guidelines
+
+### Domain Constants
+
+```typescript
+// src/domain/shared/constants/DomainConstants.ts
+
+export const ContentLimits = {
+  MAX_POST_LENGTH: 5000,          // Maximum characters per publication
+  MAX_COMMENT_LENGTH: 2000,       // Maximum characters per discussion
+  MAX_MENTIONS_PER_CONTENT: 10,   // Maximum @mentions per post/comment
+} as const;
+
+export const MediaLimits = {
+  MAX_FILE_SIZE: 10 * 1024 * 1024,      // 10 MB maximum file size
+  ALLOWED_MIME_TYPES: ['image/jpeg', 'image/png', 'image/gif', 'image/webp'],
+  MAX_MEDIA_PER_POST: 4,                 // Maximum media attachments per post
+} as const;
+
+export const SecurityLimits = {
+  MAX_FAILED_LOGINS: 5,           // Lockout threshold
+  LOCKOUT_DURATION_MINUTES: 15,   // Lockout duration
+  PASSWORD_MIN_LENGTH: 8,         // Minimum password length
+  PASSWORD_REGEX: /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*()_+\-=\[\]{}|;:,.<>?]).{8,128}$/,
+  MAX_ACTIVE_SESSIONS: 5,         // Maximum concurrent refresh tokens per user
+} as const;
+
+export const GroupLimits = {
+  MAX_RULES: 10,                  // Maximum rules per group
+  MAX_NAME_LENGTH: 100,           // Maximum group name length
+  MAX_DESCRIPTION_LENGTH: 1000,   // Maximum group description length
+} as const;
+```
 
 #### Size Guidelines
 

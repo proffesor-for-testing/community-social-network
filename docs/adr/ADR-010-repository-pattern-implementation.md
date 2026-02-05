@@ -600,11 +600,19 @@ export class ThreeTierCacheService implements CacheService {
   }
 
   async invalidatePattern(pattern: string): Promise<void> {
-    // Redis pattern delete
-    const keys = await this.redis.keys(pattern);
-    if (keys.length > 0) {
-      await this.redis.del(...keys);
-    }
+    // Use SCAN instead of KEYS to avoid blocking Redis
+    let cursor = '0';
+    do {
+      const [nextCursor, keys] = await this.redis.scan(
+        cursor,
+        'MATCH', pattern,
+        'COUNT', 100
+      );
+      cursor = nextCursor;
+      if (keys.length > 0) {
+        await this.redis.del(...keys);
+      }
+    } while (cursor !== '0');
 
     // Local cache pattern delete
     for (const [key] of this.localCache) {
@@ -612,6 +620,10 @@ export class ThreeTierCacheService implements CacheService {
         this.localCache.delete(key);
       }
     }
+  }
+
+  async getTTL(key: string): Promise<number> {
+    return await this.redis.ttl(key);
   }
 
   private matchesPattern(key: string, pattern: string): boolean {
@@ -627,6 +639,69 @@ export class ThreeTierCacheService implements CacheService {
       }
     }
   }
+}
+```
+
+#### Cache TTL Configuration per Aggregate
+
+| Aggregate | Cache Prefix | Redis TTL | Rationale |
+|-----------|-------------|-----------|-----------|
+| Member | `member` | 1 hour | Auth data changes infrequently |
+| Profile | `profile` | 30 minutes | Users update profiles occasionally |
+| Publication | `publication` | 2 hours | Content rarely changes after creation |
+| Discussion | `discussion` | 1 hour | Comments are append-mostly |
+| Connection | `connection` | 15 minutes | Follow status can change frequently |
+| Block | `block` | 1 hour | Blocks change infrequently |
+| Group | `group` | 2 hours | Group settings rarely change |
+| Membership | `membership` | 30 minutes | Role changes need relatively fast propagation |
+| Alert | `alert` | 5 minutes | Read status changes frequently |
+| Preference | `preference` | 24 hours | Notification preferences rarely change |
+| Administrator | `admin` | 1 hour | Admin data changes infrequently |
+
+**Local memory cache**: Always 30 seconds regardless of aggregate type (prevents stale reads).
+
+#### Cache Stampede Prevention
+
+When a popular cache entry expires, many concurrent requests may simultaneously attempt to rebuild the cache (thundering herd problem). We use **probabilistic early expiration** to prevent this:
+
+```typescript
+// src/infrastructure/shared/cache/StampedeProtection.ts
+
+export class ProbabilisticCache {
+  /**
+   * Returns true if cache should be refreshed early.
+   * Uses the "XFetch" algorithm: probability of early refresh
+   * increases as expiry approaches.
+   *
+   * @param ttl - remaining TTL in seconds
+   * @param delta - time to recompute the value (estimated)
+   * @param beta - tuning parameter (default: 1.0)
+   */
+  static shouldRefreshEarly(ttl: number, delta: number, beta: number = 1.0): boolean {
+    const random = Math.random();
+    const threshold = delta * beta * Math.log(random);
+    return -threshold >= ttl;
+  }
+}
+
+// Usage in repository findById
+async findById(id: ID): Promise<T | null> {
+  const cached = await this.getFromCache(id);
+  if (cached) {
+    const ttl = await this.cacheService.getTTL(`${this.cachePrefix}:${id}`);
+    const estimatedComputeTime = 0.05; // 50ms estimated DB query time
+
+    // Probabilistically refresh before expiry
+    if (ProbabilisticCache.shouldRefreshEarly(ttl, estimatedComputeTime)) {
+      // Refresh in background, return cached value immediately
+      this.refreshCacheAsync(id);
+    }
+
+    return cached;
+  }
+
+  // Cache miss - fetch from DB
+  return this.fetchAndCache(id);
 }
 ```
 
@@ -924,6 +999,49 @@ describe('RegisterMemberHandler', () => {
   });
 });
 ```
+
+#### Optimistic Lock Retry Strategy
+
+When an `OptimisticLockError` occurs, the application layer may retry the operation:
+
+```typescript
+// src/application/shared/RetryableCommandHandler.ts
+
+export abstract class RetryableCommandHandler<TCommand, TResult> {
+  private readonly maxRetries = 3;
+  private readonly baseDelay = 50; // ms
+
+  async execute(command: TCommand): Promise<TResult> {
+    let lastError: Error | null = null;
+
+    for (let attempt = 0; attempt <= this.maxRetries; attempt++) {
+      try {
+        return await this.handle(command);
+      } catch (error) {
+        if (error instanceof OptimisticLockError && attempt < this.maxRetries) {
+          lastError = error;
+          // Exponential backoff with jitter
+          const delay = this.baseDelay * Math.pow(2, attempt) + Math.random() * 50;
+          await new Promise(resolve => setTimeout(resolve, delay));
+          continue;
+        }
+        throw error;
+      }
+    }
+
+    throw lastError;
+  }
+
+  protected abstract handle(command: TCommand): Promise<TResult>;
+}
+```
+
+| Retry Parameter | Value | Rationale |
+|----------------|-------|-----------|
+| Max retries | 3 | Sufficient for transient conflicts |
+| Base delay | 50ms | Short enough for interactive operations |
+| Backoff | Exponential (50, 100, 200ms) | Reduces collision probability |
+| Jitter | Random 0-50ms | Prevents synchronized retries |
 
 ## Consequences
 

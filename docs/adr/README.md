@@ -24,6 +24,23 @@ This directory contains Architecture Decision Records for the Community Social N
 | [ADR-009](./ADR-009-domain-events-strategy.md) | Domain Events Strategy | Accepted | Hybrid event strategy (in-process + queue + WebSocket) |
 | [ADR-010](./ADR-010-repository-pattern-implementation.md) | Repository Pattern Implementation | Accepted | Repository pattern with 3-tier caching |
 
+### Operational & Infrastructure Decisions
+
+| ADR | Title | Status | Summary |
+|-----|-------|--------|---------|
+| [ADR-011](./ADR-011-deployment-infrastructure.md) | Deployment & Infrastructure | Accepted | Docker + Kubernetes with CI/CD, horizontal scaling, health checks |
+| [ADR-012](./ADR-012-observability-strategy.md) | Observability Strategy | Accepted | Structured logging (Pino), Prometheus metrics, OpenTelemetry tracing |
+| [ADR-013](./ADR-013-data-privacy-gdpr.md) | Data Privacy & GDPR | Accepted | Right to erasure, data portability, consent management, retention policies |
+| [ADR-014](./ADR-014-frontend-architecture.md) | Frontend Architecture | Accepted | React + TanStack Query + Zustand + Socket.IO client |
+| [ADR-015](./ADR-015-file-storage-architecture.md) | File Storage Architecture | Accepted | S3-compatible storage with Sharp image processing and CDN delivery |
+| [ADR-016](./ADR-016-email-delivery-infrastructure.md) | Email Delivery Infrastructure | Accepted | Bull Queue + Nodemailer + Handlebars templates with SES |
+
+### Quality Assurance
+
+| Document | Description |
+|----------|-------------|
+| [ADR Requirements Validation Report](./ADR-REQUIREMENTS-VALIDATION-REPORT.md) | Comprehensive analysis of all ADRs: testability, completeness, consistency, and risks |
+
 ## Bounded Contexts Overview
 
 ```
@@ -74,6 +91,21 @@ This directory contains Architecture Decision Records for the Community Social N
 - **Reference by ID** between aggregates
 - **Optimistic locking** for concurrency control
 
+### Deployment & Operations
+- **Containerized**: Docker with multi-stage builds, Kubernetes for production
+- **Observable**: Structured JSON logging, 33 Prometheus metrics, distributed tracing
+- **Scalable**: HPA with 2-6 replicas, Redis adapter for Socket.IO multi-instance
+
+### Data Privacy
+- **GDPR Compliant**: Right to erasure, data portability, consent management
+- **Retention Policies**: Automated data lifecycle with scheduled cleanup jobs
+- **Privacy by Design**: Data minimization, purpose limitation, log sanitization
+
+### Frontend
+- **React + TypeScript**: Feature-based modules aligned with bounded contexts
+- **Server State**: TanStack Query with cache invalidation via WebSocket events
+- **Client State**: Zustand for auth and UI preferences only
+
 ## Related Documentation
 
 - [System Architecture Specification](../architecture/SYSTEM_ARCHITECTURE_SPECIFICATION.md)
@@ -84,6 +116,7 @@ This directory contains Architecture Decision Records for the Community Social N
 - [M6 Social Graph Architecture](../architecture/m6-social-graph-architecture.md)
 - [M7 Notifications Architecture](../architecture/m7-notifications-architecture.md)
 - [M8 Admin Security Architecture](../architecture/m8-admin-security-architecture.md)
+- [Validation Report](./ADR-REQUIREMENTS-VALIDATION-REPORT.md)
 
 ## ADR Template
 

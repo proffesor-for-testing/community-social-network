@@ -1,0 +1,41 @@
+{
+  "compileOnSave": false,
+  "compilerOptions": {
+    "rootDir": ".",
+    "sourceMap": true,
+    "declaration": false,
+    "moduleResolution": "node",
+    "emitDecoratorMetadata": true,
+    "experimentalDecorators": true,
+    "importHelpers": true,
+    "target": "ES2021",
+    "module": "commonjs",
+    "lib": ["ES2021", "dom"],
+    "skipLibCheck": true,
+    "skipDefaultLibCheck": true,
+    "baseUrl": ".",
+    "strict": true,
+    "esModuleInterop": true,
+    "forceConsistentCasingInFileNames": true,
+    "resolveJsonModule": true,
+    "paths": {
+      "@csn/shared-types": ["libs/shared/types/src/index.ts"],
+      "@csn/shared-utils": ["libs/shared/utils/src/index.ts"],
+      "@csn/shared-constants": ["libs/shared/constants/src/index.ts"],
+      "@csn/domain-shared": ["libs/domain/shared/src/index.ts"],
+      "@csn/domain-identity": ["libs/domain/identity/src/index.ts"],
+      "@csn/domain-profile": ["libs/domain/profile/src/index.ts"],
+      "@csn/domain-content": ["libs/domain/content/src/index.ts"],
+      "@csn/domain-social-graph": ["libs/domain/social-graph/src/index.ts"],
+      "@csn/domain-community": ["libs/domain/community/src/index.ts"],
+      "@csn/domain-notification": ["libs/domain/notification/src/index.ts"],
+      "@csn/domain-admin": ["libs/domain/admin/src/index.ts"],
+      "@csn/infra-database": ["libs/infrastructure/database/src/index.ts"],
+      "@csn/infra-cache": ["libs/infrastructure/cache/src/index.ts"],
+      "@csn/infra-messaging": ["libs/infrastructure/messaging/src/index.ts"],
+      "@csn/infra-auth": ["libs/infrastructure/auth/src/index.ts"],
+      "@csn/infra-shared": ["libs/infrastructure/shared/src/index.ts"]
+    }
+  },
+  "exclude": ["node_modules", "tmp"]
+}

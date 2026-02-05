@@ -93,8 +93,11 @@ export class IdentityModule {}
 @Module({
   imports: [
     TypeOrmModule.forFeature([PostEntity, CommentEntity]),
-    IdentityModule,  // Depends on auth
-    ProfileModule,   // Depends on user profiles
+    // NOTE: NestJS module imports are for dependency injection (infrastructure concern).
+    // Domain logic communicates across contexts via domain events only (ADR-006).
+    // These imports provide: auth guards (IdentityModule) and user DTOs (ProfileModule).
+    IdentityModule,  // Provides: AuthGuard, CurrentUser decorator
+    ProfileModule,   // Provides: UserProfileDTO for API responses
     SharedModule,
   ],
   controllers: [PostController, CommentController, FeedController],
@@ -278,6 +281,43 @@ The modular monolith must meet these targets:
 | API Response (p99) | < 1000ms | Connection pooling |
 | Concurrent Users | 1,000 | Horizontal scaling |
 | Total Users | 10,000+ | Database indexing |
+
+### Capacity Planning Thresholds
+
+The modular monolith performance targets (above) are validated for the **baseline scale**. The following thresholds define when architectural intervention is required:
+
+#### Scale Tiers
+
+| Tier | Users | Concurrent | Posts | Replicas | Database | Action Required |
+|------|-------|-----------|-------|----------|----------|-----------------|
+| **Tier 1 (MVP)** | < 10,000 | < 1,000 | < 300K | 2-3 | Single PostgreSQL | None -- current architecture sufficient |
+| **Tier 2 (Growth)** | 10K-50K | 1K-5K | 300K-1.5M | 3-6 | PostgreSQL + read replica | Add read replica, increase Redis memory, review slow queries |
+| **Tier 3 (Scale)** | 50K-200K | 5K-20K | 1.5M-6M | 6-12 | PostgreSQL cluster + PgBouncer | Consider extracting Notification service (highest write volume) |
+| **Tier 4 (Extract)** | 200K+ | 20K+ | 6M+ | 12+ | Per-service databases | Full microservices extraction via Strangler Fig (see Migration Path) |
+
+#### Degradation Thresholds
+
+Performance targets break at these approximate load levels (single instance):
+
+| Metric | Target | Degrades At | Fails At | Bottleneck |
+|--------|--------|------------|----------|------------|
+| API p95 | < 500ms | ~800 concurrent | ~1,500 concurrent | Connection pool exhaustion |
+| Feed query | < 100ms | ~500K posts | ~2M posts | Index scan performance |
+| Comment tree | < 50ms | depth 3 + 500 comments/post | 1000+ comments/post | Recursive CTE memory |
+| User search | < 100ms | ~50K users | ~200K users | pg_trgm index size |
+| Cache hit rate | 85-90% | ~5K concurrent | ~15K concurrent | Redis memory eviction |
+| Notification insert | < 50ms | ~10K events/min | ~50K events/min | Partition write throughput |
+
+#### Monitoring Triggers for Scaling
+
+| Trigger | Threshold | Action |
+|---------|-----------|--------|
+| API p95 > 400ms for 5 minutes | 80% of target | Alert: investigate and scale |
+| API p95 > 500ms for 2 minutes | 100% of target | Auto-scale: add replica |
+| DB connection pool > 80% | 16/20 connections | Alert: consider PgBouncer or pool increase |
+| Redis memory > 75% | Nearing eviction | Alert: increase Redis memory or review TTLs |
+| Bull Queue depth > 500 for 5 minutes | Sustained backlog | Alert: scale queue consumers |
+| Feed query > 80ms for 10 minutes | 80% of target | Alert: review query plan, add covering index |
 
 ## References
 

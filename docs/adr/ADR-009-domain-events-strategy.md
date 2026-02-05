@@ -135,6 +135,17 @@ Examples:
 - admin.audit_entry_created
 ```
 
+#### Naming Convention Exceptions
+
+Events that span multiple aggregates or reference external entities follow a relaxed pattern:
+
+| Event | Rationale for Deviation |
+|-------|------------------------|
+| `content.member_mentioned` | Cross-aggregate: mentions are extracted from content but target members |
+| `community.member_kicked` | Shortened from `community.member_kicked_from_group` for readability |
+
+All other events MUST follow the `[Context].[Aggregate][PastTenseVerb]` convention strictly.
+
 ---
 
 ### Event Catalog by Bounded Context
@@ -174,6 +185,8 @@ export class MemberAuthenticatedEvent extends DomainEvent {
     return 'identity.member_authenticated';
   }
 }
+
+> **Implementation Note**: The `ipAddress` and `userAgent` fields are populated at the application layer by the authentication handler, NOT by the domain aggregate. The `Member` aggregate raises a simpler `MemberAuthenticationSucceededEvent(memberId)` which the handler enriches with HTTP context before publishing as `MemberAuthenticatedEvent`. See ADR-008 for the aggregate-level event.
 
 export class MemberSuspendedEvent extends DomainEvent {
   constructor(
@@ -298,6 +311,7 @@ export class MemberMentionedEvent extends DomainEvent {
     super(sourceId, sourceType === 'publication' ? 'Publication' : 'Discussion');
   }
 
+  // Note: Follows [Context].[Subject][Verb] pattern rather than aggregate-prefix pattern for cross-aggregate events
   get eventType(): string { return 'content.member_mentioned'; }
 }
 
@@ -441,6 +455,7 @@ export class MemberKickedFromGroupEvent extends DomainEvent {
     super(groupId, 'Group');
   }
 
+  // Full form: community.member_kicked_from_group (shortened for readability)
   get eventType(): string { return 'community.member_kicked'; }
 }
 
@@ -736,6 +751,141 @@ export class SocketIOEventEmitter implements RealTimeEventEmitter {
 }
 ```
 
+### Dead Letter Queue (DLQ) Strategy
+
+Events that fail all retry attempts (3 retries with exponential backoff) are moved to a Dead Letter Queue for manual inspection and replay.
+
+#### DLQ Configuration
+
+```typescript
+// src/infrastructure/shared/events/DeadLetterQueue.ts
+
+export class DeadLetterQueueHandler {
+  private dlqQueue: Queue.Queue;
+
+  constructor(redisUrl: string) {
+    this.dlqQueue = new Queue('dead-letter-queue', redisUrl, {
+      defaultJobOptions: {
+        removeOnComplete: false,  // Keep for inspection
+        removeOnFail: false,      // Never auto-remove failed DLQ entries
+      },
+    });
+  }
+
+  async moveToDeadLetter(event: DomainEvent, error: Error, attempts: number): Promise<void> {
+    await this.dlqQueue.add('failed-event', {
+      event: event.toJSON(),
+      error: {
+        message: error.message,
+        stack: error.stack,
+      },
+      failedAt: new Date().toISOString(),
+      attempts,
+      originalQueue: 'integration-events',
+    });
+  }
+
+  async replay(jobId: string): Promise<void> {
+    const job = await this.dlqQueue.getJob(jobId);
+    if (!job) throw new Error(`DLQ job ${jobId} not found`);
+
+    const integrationQueue = new Queue('integration-events', this.redisUrl);
+    await integrationQueue.add(job.data.event.eventType, job.data.event);
+    await job.remove();
+  }
+
+  async listFailed(limit: number = 50): Promise<DLQEntry[]> {
+    const jobs = await this.dlqQueue.getWaiting(0, limit);
+    return jobs.map(job => ({
+      id: job.id,
+      eventType: job.data.event.eventType,
+      failedAt: job.data.failedAt,
+      error: job.data.error.message,
+      attempts: job.data.attempts,
+    }));
+  }
+}
+```
+
+#### DLQ Monitoring
+
+| Metric | Alert Threshold | Action |
+|--------|----------------|--------|
+| DLQ depth | > 10 events | WARNING: Investigate failing handlers |
+| DLQ depth | > 50 events | CRITICAL: Page on-call engineer |
+| DLQ event age | > 24 hours | WARNING: Stale events need replay or discard |
+| Same event type failures | > 5 in 1 hour | CRITICAL: Likely systematic handler bug |
+
+### Event Schema Versioning
+
+Events evolve over time. We adopt **additive-only** versioning to maintain backward compatibility.
+
+#### Versioning Rules
+
+1. **Adding fields**: Always backward-compatible. New fields are optional with defaults.
+2. **Removing fields**: NEVER remove fields. Deprecate by adding `@deprecated` JSDoc.
+3. **Changing field types**: NEVER change existing field types. Add a new field instead.
+4. **Renaming fields**: NEVER rename. Add new field, deprecate old.
+
+#### Version Negotiation
+
+```typescript
+// Events carry a version number (default: 1)
+export abstract class DomainEvent {
+  readonly version: number;
+
+  constructor(aggregateId: string, aggregateType: string, version: number = 1) {
+    // ...
+  }
+}
+
+// Consumers check version and handle accordingly
+export class VersionAwareHandler<T extends DomainEvent> implements EventHandler<T> {
+  private handlers: Map<number, (event: T) => Promise<void>> = new Map();
+
+  registerVersion(version: number, handler: (event: T) => Promise<void>): void {
+    this.handlers.set(version, handler);
+  }
+
+  async handle(event: T): Promise<void> {
+    const handler = this.handlers.get(event.version)
+      || this.handlers.get(this.latestVersion());
+
+    if (!handler) {
+      throw new UnsupportedEventVersionError(event.eventType, event.version);
+    }
+
+    await handler(event);
+  }
+
+  private latestVersion(): number {
+    return Math.max(...this.handlers.keys());
+  }
+}
+```
+
+#### Example: Adding a field to PublicationCreatedEvent
+
+```typescript
+// Version 1 (original)
+// payload: { publicationId, authorId, visibility, mentionedUserIds }
+
+// Version 2 (added groupId for group posts)
+export class PublicationCreatedEvent extends DomainEvent {
+  constructor(
+    readonly publicationId: string,
+    readonly authorId: string,
+    readonly visibility: string,
+    readonly mentionedUserIds: string[],
+    readonly groupId: string | null = null  // New field, optional, defaults to null
+  ) {
+    super(publicationId, 'Publication', 2);  // Version bumped to 2
+  }
+}
+// V1 consumers continue working -- they ignore groupId
+// V2 consumers can use groupId if present
+```
+
 ---
 
 ### Event Handler Registration
@@ -782,6 +932,15 @@ export function registerEventHandlers(
 | Integration Events | At-least-once | Bull Queue with 3 retries |
 | Notification Events | At-most-once (WS), At-least-once (Email) | Socket.IO + Bull Queue |
 | Audit Events | At-least-once | Bull Queue with persistent storage |
+
+### Processing Latency SLAs
+
+| Event Category | Max Processing Latency | Monitoring |
+|----------------|----------------------|------------|
+| Domain Events | < 50ms (in-process) | Application metrics |
+| Integration Events | < 5 seconds (p95) | Bull Queue dashboard |
+| Notification Events | < 2 seconds (WebSocket) | Socket.IO metrics |
+| Audit Events | < 10 seconds (p95) | Bull Queue dashboard |
 
 ### Idempotency
 

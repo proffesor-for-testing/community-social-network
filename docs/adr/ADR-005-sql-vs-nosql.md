@@ -241,6 +241,67 @@ CREATE TABLE notifications_2025_02 PARTITION OF notifications
 -- Additional partitions created via cron job
 ```
 
+### Notification Partition Lifecycle
+
+#### Auto-Creation
+Partitions are created 3 months ahead by a scheduled job:
+
+```sql
+-- Scheduled job runs monthly on the 1st at 00:00 UTC
+-- Creates partitions 3 months into the future
+CREATE OR REPLACE FUNCTION create_future_partitions()
+RETURNS void AS $$
+DECLARE
+  partition_date DATE;
+  partition_name TEXT;
+  start_date DATE;
+  end_date DATE;
+BEGIN
+  FOR i IN 0..2 LOOP
+    partition_date := DATE_TRUNC('month', NOW()) + (i || ' months')::INTERVAL;
+    partition_name := 'notifications_' || TO_CHAR(partition_date, 'YYYY_MM');
+    start_date := partition_date;
+    end_date := partition_date + '1 month'::INTERVAL;
+
+    -- Create partition if it doesn't exist
+    IF NOT EXISTS (SELECT 1 FROM pg_class WHERE relname = partition_name) THEN
+      EXECUTE format(
+        'CREATE TABLE %I PARTITION OF notifications FOR VALUES FROM (%L) TO (%L)',
+        partition_name, start_date, end_date
+      );
+    END IF;
+  END LOOP;
+END;
+$$ LANGUAGE plpgsql;
+```
+
+#### Retention Policy
+- **Active partitions**: Last 6 months of notifications retained in PostgreSQL
+- **Archive**: Partitions older than 6 months are exported to cold storage (S3) and detached
+- **Deletion**: Archived partitions are deleted from PostgreSQL after successful export verification
+
+```sql
+-- Monthly cleanup job: detach partitions older than 6 months
+CREATE OR REPLACE FUNCTION archive_old_partitions()
+RETURNS void AS $$
+DECLARE
+  cutoff_date DATE := DATE_TRUNC('month', NOW()) - '6 months'::INTERVAL;
+  partition_name TEXT;
+BEGIN
+  FOR partition_name IN
+    SELECT tablename FROM pg_tables
+    WHERE tablename LIKE 'notifications_%'
+    AND tablename < 'notifications_' || TO_CHAR(cutoff_date, 'YYYY_MM')
+  LOOP
+    -- Detach (does not delete data, allows export first)
+    EXECUTE format('ALTER TABLE notifications DETACH PARTITION %I', partition_name);
+    -- After export verification, drop:
+    -- EXECUTE format('DROP TABLE %I', partition_name);
+  END LOOP;
+END;
+$$ LANGUAGE plpgsql;
+```
+
 ### PostgreSQL-Specific Features Used
 
 #### 1. Recursive CTE for Comment Trees
@@ -454,6 +515,46 @@ const dataSource = new DataSource({
 | Comment tree | < 50ms | Recursive CTE + path index |
 | User search | < 100ms | pg_trgm GIN index |
 | Notification count | < 10ms | Partial index + Redis |
+
+### Scale Limits and Intervention Points
+
+PostgreSQL performance degrades predictably at certain data volumes. These thresholds trigger infrastructure changes:
+
+| Data Volume | Impact | Intervention |
+|------------|--------|-------------|
+| users > 50K | User search slows (pg_trgm index grows) | Consider Elasticsearch for search |
+| posts > 1M | Feed queries slow (index scans grow) | Add covering indexes, materialized views |
+| posts > 5M | Feed generation exceeds 100ms target | Add read replica for feed queries |
+| comments > 5M | Comment tree CTEs slow | Consider denormalized comment counts table |
+| notifications > 50M | Partition management overhead | Automate partition archival to cold storage |
+| follows > 500K | Social graph queries slow | Consider graph cache in Redis |
+| DB size > 100 GB | Backup times increase significantly | Move to incremental backup (pg_basebackup + WAL) |
+| Connections > 100 | PostgreSQL process overhead | Deploy PgBouncer in transaction mode |
+
+**Monitoring queries** to track data volume:
+```sql
+-- Run weekly to track growth
+SELECT
+  schemaname,
+  relname AS table_name,
+  n_live_tup AS row_count,
+  pg_size_pretty(pg_total_relation_size(relid)) AS total_size
+FROM pg_stat_user_tables
+ORDER BY n_live_tup DESC;
+```
+
+### Backup and Recovery Strategy
+
+| Component | Backup Method | Frequency | Retention | RTO | RPO |
+|-----------|--------------|-----------|-----------|-----|-----|
+| PostgreSQL | pg_dump full backup | Daily at 02:00 UTC | 30 days | 4 hours | 24 hours |
+| PostgreSQL | WAL archiving | Continuous | 7 days | 1 hour | < 5 minutes |
+| Redis | RDB snapshots | Every 15 minutes | 24 hours | 15 minutes | 15 minutes |
+| Redis | AOF persistence | Continuous | 24 hours | 5 minutes | < 1 second |
+
+**Point-in-Time Recovery**: WAL archiving enables recovery to any point within the 7-day retention window.
+
+**Disaster Recovery**: Full backups are stored in a separate availability zone/region.
 
 ## References
 

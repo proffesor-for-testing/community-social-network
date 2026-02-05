@@ -102,9 +102,83 @@ src/
 
 2. **Repository Interface Separation**: Repository interfaces live in the domain layer; implementations live in infrastructure.
 
-3. **Event-Driven Communication**: Cross-context communication MUST use domain events, not direct method calls.
+3. **Event-Driven Communication**: Cross-context **domain logic** communication MUST use domain events, not direct method calls. NestJS module imports for infrastructure concerns (authentication guards, DTO mappers) are permitted at the interfaces/infrastructure layer, but the domain layer MUST NOT reference other contexts directly.
 
 4. **Aggregate Boundaries**: Each aggregate defines a transactional boundary. Transactions MUST NOT span multiple aggregates.
+
+### Architecture Fitness Functions
+
+The following automated checks MUST run in CI to enforce architectural constraints:
+
+#### 1. Domain Layer Purity Check
+
+```bash
+# Verify domain layer has no framework imports
+# Must return 0 matches to pass
+
+grep -r "from '@nestjs" src/domain/ && echo "FAIL: Domain layer imports NestJS" && exit 1
+grep -r "from 'typeorm" src/domain/ && echo "FAIL: Domain layer imports TypeORM" && exit 1
+grep -r "from 'bull'" src/domain/ && echo "FAIL: Domain layer imports Bull" && exit 1
+grep -r "from 'socket.io'" src/domain/ && echo "FAIL: Domain layer imports Socket.IO" && exit 1
+echo "PASS: Domain layer is framework-free"
+```
+
+#### 2. Layer Dependency Enforcement
+
+```typescript
+// tools/architecture-tests/layer-dependencies.test.ts
+
+describe('Architecture Layer Dependencies', () => {
+  it('domain layer does not import from infrastructure', () => {
+    const domainImports = scanImports('src/domain/**/*.ts');
+    const violations = domainImports.filter(i =>
+      i.source.includes('/infrastructure/') ||
+      i.source.includes('/interfaces/')
+    );
+    expect(violations).toHaveLength(0);
+  });
+
+  it('domain layer does not import from application', () => {
+    const domainImports = scanImports('src/domain/**/*.ts');
+    const violations = domainImports.filter(i =>
+      i.source.includes('/application/')
+    );
+    expect(violations).toHaveLength(0);
+  });
+
+  it('application layer does not import from interfaces', () => {
+    const appImports = scanImports('src/application/**/*.ts');
+    const violations = appImports.filter(i =>
+      i.source.includes('/interfaces/')
+    );
+    expect(violations).toHaveLength(0);
+  });
+});
+```
+
+#### 3. Cross-Context Import Detection
+
+```typescript
+// tools/architecture-tests/context-boundaries.test.ts
+
+describe('Bounded Context Isolation', () => {
+  const contexts = ['identity', 'profile', 'content', 'social-graph', 'community', 'notification', 'admin'];
+
+  contexts.forEach(context => {
+    it(`${context} domain does not import from other context domains`, () => {
+      const imports = scanImports(`src/domain/${context}/**/*.ts`);
+      const crossContextImports = imports.filter(i => {
+        return contexts
+          .filter(c => c !== context && c !== 'shared')
+          .some(c => i.source.includes(`/domain/${c}/`));
+      });
+      expect(crossContextImports).toHaveLength(0);
+    });
+  });
+});
+```
+
+These tests MUST pass in CI before any merge to `main`.
 
 ## Consequences
 
