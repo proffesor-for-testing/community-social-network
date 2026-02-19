@@ -1,0 +1,24 @@
+{
+  "name": "infra-database",
+  "$schema": "../../../../node_modules/nx/schemas/project-schema.json",
+  "sourceRoot": "libs/infrastructure/database/src",
+  "projectType": "library",
+  "targets": {
+    "build": {
+      "executor": "@nx/js:tsc",
+      "outputs": ["{options.outputPath}"],
+      "options": {
+        "outputPath": "dist/libs/infrastructure/database",
+        "main": "libs/infrastructure/database/src/index.ts",
+        "tsConfig": "libs/infrastructure/database/tsconfig.lib.json"
+      }
+    },
+    "lint": {
+      "executor": "@nx/eslint:lint",
+      "options": {
+        "lintFilePatterns": ["libs/infrastructure/database/**/*.ts"]
+      }
+    }
+  },
+  "tags": ["scope:infra", "type:lib"]
+}

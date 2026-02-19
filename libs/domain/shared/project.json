@@ -1,0 +1,24 @@
+{
+  "name": "domain-shared",
+  "$schema": "../../../../node_modules/nx/schemas/project-schema.json",
+  "sourceRoot": "libs/domain/shared/src",
+  "projectType": "library",
+  "targets": {
+    "build": {
+      "executor": "@nx/js:tsc",
+      "outputs": ["{options.outputPath}"],
+      "options": {
+        "outputPath": "dist/libs/domain/shared",
+        "main": "libs/domain/shared/src/index.ts",
+        "tsConfig": "libs/domain/shared/tsconfig.lib.json"
+      }
+    },
+    "lint": {
+      "executor": "@nx/eslint:lint",
+      "options": {
+        "lintFilePatterns": ["libs/domain/shared/**/*.ts"]
+      }
+    }
+  },
+  "tags": ["scope:domain", "type:lib"]
+}

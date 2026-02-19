@@ -1,0 +1,33 @@
+export const CONTENT_LIMITS = {
+  MAX_POST_LENGTH: 5000,
+  MAX_COMMENT_LENGTH: 2000,
+  MAX_BIO_LENGTH: 500,
+  MAX_DISPLAY_NAME_LENGTH: 50,
+  MIN_DISPLAY_NAME_LENGTH: 2,
+  MAX_GROUP_NAME_LENGTH: 100,
+  MAX_GROUP_DESCRIPTION_LENGTH: 1000,
+  MAX_GROUP_RULES: 20,
+} as const;
+
+export const SOCIAL_LIMITS = {
+  MAX_BLOCKS: 1000,
+} as const;
+
+export const PAGINATION = {
+  DEFAULT_PAGE_SIZE: 20,
+  MAX_PAGE_SIZE: 100,
+  MIN_PAGE: 1,
+} as const;
+
+export const CACHE_TTL = {
+  SHORT: 30,
+  MEDIUM: 300,
+  LONG: 3600,
+  DAY: 86400,
+} as const;
+
+export const AUTH = {
+  ACCESS_TOKEN_TTL: 900,
+  REFRESH_TOKEN_TTL: 604800,
+  MAX_SESSIONS: 5,
+} as const;

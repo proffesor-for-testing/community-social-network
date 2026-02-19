@@ -1,0 +1,264 @@
+{
+  "graph": {
+    "nodes": {
+      "shared-constants": {
+        "name": "shared-constants",
+        "type": "lib",
+        "data": {
+          "root": "libs/shared/constants",
+          "targets": {
+            "build": {
+              "executor": "@nx/js:tsc",
+              "dependsOn": [
+                "^build"
+              ],
+              "cache": true,
+              "outputs": [
+                "{options.outputPath}"
+              ],
+              "options": {
+                "outputPath": "dist/libs/shared/constants",
+                "main": "libs/shared/constants/src/index.ts",
+                "tsConfig": "libs/shared/constants/tsconfig.lib.json"
+              },
+              "configurations": {}
+            },
+            "lint": {
+              "executor": "@nx/eslint:lint",
+              "cache": true,
+              "options": {
+                "lintFilePatterns": [
+                  "libs/shared/constants/**/*.ts"
+                ]
+              },
+              "configurations": {}
+            }
+          },
+          "name": "shared-constants",
+          "$schema": "../../../node_modules/nx/schemas/project-schema.json",
+          "sourceRoot": "libs/shared/constants/src",
+          "projectType": "library",
+          "tags": [
+            "scope:shared",
+            "type:lib"
+          ],
+          "implicitDependencies": []
+        }
+      },
+      "shared-types": {
+        "name": "shared-types",
+        "type": "lib",
+        "data": {
+          "root": "libs/shared/types",
+          "targets": {
+            "build": {
+              "executor": "@nx/js:tsc",
+              "dependsOn": [
+                "^build"
+              ],
+              "cache": true,
+              "outputs": [
+                "{options.outputPath}"
+              ],
+              "options": {
+                "outputPath": "dist/libs/shared/types",
+                "main": "libs/shared/types/src/index.ts",
+                "tsConfig": "libs/shared/types/tsconfig.lib.json"
+              },
+              "configurations": {}
+            },
+            "lint": {
+              "executor": "@nx/eslint:lint",
+              "cache": true,
+              "options": {
+                "lintFilePatterns": [
+                  "libs/shared/types/**/*.ts"
+                ]
+              },
+              "configurations": {}
+            }
+          },
+          "name": "shared-types",
+          "$schema": "../../../node_modules/nx/schemas/project-schema.json",
+          "sourceRoot": "libs/shared/types/src",
+          "projectType": "library",
+          "tags": [
+            "scope:shared",
+            "type:lib"
+          ],
+          "implicitDependencies": []
+        }
+      },
+      "shared-utils": {
+        "name": "shared-utils",
+        "type": "lib",
+        "data": {
+          "root": "libs/shared/utils",
+          "targets": {
+            "build": {
+              "executor": "@nx/js:tsc",
+              "dependsOn": [
+                "^build"
+              ],
+              "cache": true,
+              "outputs": [
+                "{options.outputPath}"
+              ],
+              "options": {
+                "outputPath": "dist/libs/shared/utils",
+                "main": "libs/shared/utils/src/index.ts",
+                "tsConfig": "libs/shared/utils/tsconfig.lib.json"
+              },
+              "configurations": {}
+            },
+            "lint": {
+              "executor": "@nx/eslint:lint",
+              "cache": true,
+              "options": {
+                "lintFilePatterns": [
+                  "libs/shared/utils/**/*.ts"
+                ]
+              },
+              "configurations": {}
+            }
+          },
+          "name": "shared-utils",
+          "$schema": "../../../node_modules/nx/schemas/project-schema.json",
+          "sourceRoot": "libs/shared/utils/src",
+          "projectType": "library",
+          "tags": [
+            "scope:shared",
+            "type:lib"
+          ],
+          "implicitDependencies": []
+        }
+      },
+      "api": {
+        "name": "api",
+        "type": "app",
+        "data": {
+          "root": "apps/api",
+          "targets": {
+            "build": {
+              "executor": "@nx/js:tsc",
+              "dependsOn": [
+                "^build"
+              ],
+              "cache": true,
+              "outputs": [
+                "{options.outputPath}"
+              ],
+              "options": {
+                "outputPath": "dist/apps/api",
+                "main": "apps/api/src/main.ts",
+                "tsConfig": "apps/api/tsconfig.app.json",
+                "assets": []
+              },
+              "configurations": {}
+            },
+            "test": {
+              "executor": "@nx/js:tsc",
+              "cache": true,
+              "options": {
+                "tsConfig": "apps/api/tsconfig.spec.json"
+              },
+              "configurations": {}
+            },
+            "lint": {
+              "executor": "@nx/eslint:lint",
+              "cache": true,
+              "options": {
+                "lintFilePatterns": [
+                  "apps/api/**/*.ts"
+                ]
+              },
+              "configurations": {}
+            },
+            "serve": {
+              "executor": "@nx/js:node",
+              "options": {
+                "buildTarget": "api:build"
+              },
+              "configurations": {}
+            }
+          },
+          "name": "api",
+          "$schema": "../../node_modules/nx/schemas/project-schema.json",
+          "sourceRoot": "apps/api/src",
+          "projectType": "application",
+          "tags": [
+            "scope:api",
+            "type:app"
+          ],
+          "implicitDependencies": []
+        }
+      },
+      "web": {
+        "name": "web",
+        "type": "app",
+        "data": {
+          "root": "apps/web",
+          "targets": {
+            "build": {
+              "executor": "@nx/vite:build",
+              "dependsOn": [
+                "^build"
+              ],
+              "cache": true,
+              "outputs": [
+                "{options.outputPath}"
+              ],
+              "options": {
+                "outputPath": "dist/apps/web"
+              },
+              "configurations": {}
+            },
+            "test": {
+              "executor": "@nx/vite:test",
+              "cache": true,
+              "options": {
+                "passWithNoTests": true
+              },
+              "configurations": {}
+            },
+            "lint": {
+              "executor": "@nx/eslint:lint",
+              "cache": true,
+              "options": {
+                "lintFilePatterns": [
+                  "apps/web/**/*.{ts,tsx}"
+                ]
+              },
+              "configurations": {}
+            },
+            "serve": {
+              "executor": "@nx/vite:dev-server",
+              "options": {
+                "buildTarget": "web:build"
+              },
+              "configurations": {}
+            }
+          },
+          "name": "web",
+          "$schema": "../../node_modules/nx/schemas/project-schema.json",
+          "sourceRoot": "apps/web/src",
+          "projectType": "application",
+          "tags": [
+            "scope:web",
+            "type:app"
+          ],
+          "implicitDependencies": []
+        }
+      }
+    },
+    "dependencies": {
+      "shared-constants": [],
+      "shared-types": [],
+      "shared-utils": [],
+      "api": [],
+      "web": []
+    }
+  },
+  "affectedProjects": [],
+  "criticalPath": []
+}

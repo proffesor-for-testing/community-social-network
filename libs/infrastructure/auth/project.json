@@ -1,0 +1,24 @@
+{
+  "name": "infra-auth",
+  "$schema": "../../../../node_modules/nx/schemas/project-schema.json",
+  "sourceRoot": "libs/infrastructure/auth/src",
+  "projectType": "library",
+  "targets": {
+    "build": {
+      "executor": "@nx/js:tsc",
+      "outputs": ["{options.outputPath}"],
+      "options": {
+        "outputPath": "dist/libs/infrastructure/auth",
+        "main": "libs/infrastructure/auth/src/index.ts",
+        "tsConfig": "libs/infrastructure/auth/tsconfig.lib.json"
+      }
+    },
+    "lint": {
+      "executor": "@nx/eslint:lint",
+      "options": {
+        "lintFilePatterns": ["libs/infrastructure/auth/**/*.ts"]
+      }
+    }
+  },
+  "tags": ["scope:infra", "type:lib"]
+}

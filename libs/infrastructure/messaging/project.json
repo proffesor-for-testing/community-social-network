@@ -1,0 +1,24 @@
+{
+  "name": "infra-messaging",
+  "$schema": "../../../node_modules/nx/schemas/project-schema.json",
+  "sourceRoot": "libs/infrastructure/messaging/src",
+  "projectType": "library",
+  "targets": {
+    "build": {
+      "executor": "@nx/js:tsc",
+      "outputs": ["{options.outputPath}"],
+      "options": {
+        "outputPath": "dist/libs/infrastructure/messaging",
+        "main": "libs/infrastructure/messaging/src/index.ts",
+        "tsConfig": "libs/infrastructure/messaging/tsconfig.lib.json"
+      }
+    },
+    "lint": {
+      "executor": "@nx/eslint:lint",
+      "options": {
+        "lintFilePatterns": ["libs/infrastructure/messaging/**/*.ts"]
+      }
+    }
+  },
+  "tags": ["scope:infra", "type:lib"]
+}
