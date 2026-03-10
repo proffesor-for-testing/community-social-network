@@ -32,6 +32,21 @@ export class Preference extends AggregateRoot<PreferenceId> {
     return preference;
   }
 
+  /**
+   * Reconstitute a Preference from persistence without emitting events.
+   */
+  public static reconstitute(
+    id: PreferenceId,
+    memberId: UserId,
+    channelPreferences: Map<string, DeliveryChannel[]>,
+    mutedUntil: Timestamp | null,
+    version: number,
+  ): Preference {
+    const preference = new Preference(id, memberId, channelPreferences, mutedUntil);
+    preference.setVersion(version);
+    return preference;
+  }
+
   public setChannelsForType(alertType: AlertType, channels: DeliveryChannel[]): void {
     this._channelPreferences.set(alertType, [...channels]);
 

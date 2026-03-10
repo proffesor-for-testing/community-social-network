@@ -1,0 +1,30 @@
+{
+  "name": "infra-content",
+  "$schema": "../../../node_modules/nx/schemas/project-schema.json",
+  "sourceRoot": "libs/infrastructure/content/src",
+  "projectType": "library",
+  "tags": ["scope:content", "type:infrastructure"],
+  "targets": {
+    "build": {
+      "executor": "@nx/js:tsc",
+      "outputs": ["{options.outputPath}"],
+      "options": {
+        "outputPath": "dist/libs/infrastructure/content",
+        "tsConfig": "libs/infrastructure/content/tsconfig.lib.json",
+        "main": "libs/infrastructure/content/src/index.ts"
+      }
+    },
+    "lint": {
+      "executor": "@nx/eslint:lint",
+      "options": {
+        "lintFilePatterns": ["libs/infrastructure/content/src/**/*.ts"]
+      }
+    },
+    "test": {
+      "executor": "@nx/vite:test",
+      "options": {
+        "config": "vitest.config.ts"
+      }
+    }
+  }
+}

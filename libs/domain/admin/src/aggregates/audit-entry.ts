@@ -75,6 +75,34 @@ export class AuditEntry extends AggregateRoot<AuditEntryId> {
     return entry;
   }
 
+  /**
+   * Reconstitute an AuditEntry from persistence without emitting events.
+   */
+  public static reconstitute(
+    id: AuditEntryId,
+    action: string,
+    performedBy: UserId,
+    targetId: string,
+    targetType: string,
+    details: Record<string, unknown>,
+    ipAddress: IpAddress,
+    createdAt: Timestamp,
+    version: number,
+  ): AuditEntry {
+    const entry = new AuditEntry(
+      id,
+      action,
+      performedBy,
+      targetId,
+      targetType,
+      details,
+      ipAddress,
+      createdAt,
+    );
+    entry.setVersion(version);
+    return entry;
+  }
+
   public get action(): string {
     return this._action;
   }

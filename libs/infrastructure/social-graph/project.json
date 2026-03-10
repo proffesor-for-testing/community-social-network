@@ -1,0 +1,30 @@
+{
+  "name": "infra-social-graph",
+  "$schema": "../../../node_modules/nx/schemas/project-schema.json",
+  "sourceRoot": "libs/infrastructure/social-graph/src",
+  "projectType": "library",
+  "tags": ["scope:social-graph", "type:infrastructure"],
+  "targets": {
+    "build": {
+      "executor": "@nx/js:tsc",
+      "outputs": ["{options.outputPath}"],
+      "options": {
+        "outputPath": "dist/libs/infrastructure/social-graph",
+        "tsConfig": "libs/infrastructure/social-graph/tsconfig.lib.json",
+        "main": "libs/infrastructure/social-graph/src/index.ts"
+      }
+    },
+    "lint": {
+      "executor": "@nx/eslint:lint",
+      "options": {
+        "lintFilePatterns": ["libs/infrastructure/social-graph/src/**/*.ts"]
+      }
+    },
+    "test": {
+      "executor": "@nx/vite:test",
+      "options": {
+        "config": "vitest.config.ts"
+      }
+    }
+  }
+}

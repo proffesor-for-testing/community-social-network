@@ -1,0 +1,30 @@
+{
+  "name": "infra-admin",
+  "$schema": "../../../node_modules/nx/schemas/project-schema.json",
+  "sourceRoot": "libs/infrastructure/admin/src",
+  "projectType": "library",
+  "tags": ["scope:admin", "type:infrastructure"],
+  "targets": {
+    "build": {
+      "executor": "@nx/js:tsc",
+      "outputs": ["{options.outputPath}"],
+      "options": {
+        "outputPath": "dist/libs/infrastructure/admin",
+        "tsConfig": "libs/infrastructure/admin/tsconfig.lib.json",
+        "main": "libs/infrastructure/admin/src/index.ts"
+      }
+    },
+    "lint": {
+      "executor": "@nx/eslint:lint",
+      "options": {
+        "lintFilePatterns": ["libs/infrastructure/admin/src/**/*.ts"]
+      }
+    },
+    "test": {
+      "executor": "@nx/vite:test",
+      "options": {
+        "config": "vitest.config.ts"
+      }
+    }
+  }
+}

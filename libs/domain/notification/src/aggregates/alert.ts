@@ -63,6 +63,25 @@ export class Alert extends AggregateRoot<AlertId> {
     return alert;
   }
 
+  /**
+   * Reconstitute an Alert from persistence without emitting events.
+   */
+  public static reconstitute(
+    id: AlertId,
+    recipientId: UserId,
+    type: AlertType,
+    content: AlertContent,
+    sourceId: string,
+    createdAt: Timestamp,
+    status: AlertStatus,
+    readAt: Timestamp | null,
+    version: number,
+  ): Alert {
+    const alert = new Alert(id, recipientId, type, content, sourceId, createdAt, status, readAt);
+    alert.setVersion(version);
+    return alert;
+  }
+
   public markAsRead(): void {
     assertAlertStatusTransition(this._status, AlertStatus.READ);
     this._status = AlertStatus.READ;

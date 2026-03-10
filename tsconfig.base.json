@@ -34,7 +34,14 @@
       "@csn/infra-cache": ["libs/infrastructure/cache/src/index.ts"],
       "@csn/infra-messaging": ["libs/infrastructure/messaging/src/index.ts"],
       "@csn/infra-auth": ["libs/infrastructure/auth/src/index.ts"],
-      "@csn/infra-shared": ["libs/infrastructure/shared/src/index.ts"]
+      "@csn/infra-shared": ["libs/infrastructure/shared/src/index.ts"],
+      "@csn/infra-identity": ["libs/infrastructure/identity/src/index.ts"],
+      "@csn/infra-profile": ["libs/infrastructure/profile/src/index.ts"],
+      "@csn/infra-content": ["libs/infrastructure/content/src/index.ts"],
+      "@csn/infra-social-graph": ["libs/infrastructure/social-graph/src/index.ts"],
+      "@csn/infra-community": ["libs/infrastructure/community/src/index.ts"],
+      "@csn/infra-notification": ["libs/infrastructure/notification/src/index.ts"],
+      "@csn/infra-admin": ["libs/infrastructure/admin/src/index.ts"]
     }
   },
   "exclude": ["node_modules", "tmp"]

@@ -2,38 +2,51 @@
 
 This directory contains Architecture Decision Records for the Community Social Network platform.
 
+**Last Updated**: 2026-03-10
+
 ## ADR Index
 
 ### Foundation Decisions (System Architecture)
 
-| ADR | Title | Status | Summary |
-|-----|-------|--------|---------|
-| [ADR-001](./ADR-001-monorepo-vs-multi-repo.md) | Monorepo vs Multi-Repo | Accepted | **Monorepo** - Single repository with NX for better code sharing |
-| [ADR-002](./ADR-002-microservices-vs-monolith.md) | Microservices vs Monolith | Accepted | **Modular Monolith** - Monolith with clear module boundaries for MVP |
-| [ADR-003](./ADR-003-rest-vs-graphql.md) | REST vs GraphQL | Accepted | **REST** - Simpler implementation, better caching for MVP |
-| [ADR-004](./ADR-004-session-vs-token-auth.md) | Session-based vs Token-based Auth | Accepted | **JWT** - Stateless, mobile-friendly authentication |
-| [ADR-005](./ADR-005-sql-vs-nosql.md) | SQL vs NoSQL | Accepted | **PostgreSQL** - Relational DB for complex queries and joins |
+| ADR | Title | Status | Implementation | Summary |
+|-----|-------|--------|----------------|---------|
+| [ADR-001](./ADR-001-monorepo-vs-multi-repo.md) | Monorepo vs Multi-Repo | Accepted | DONE | **Monorepo** - NX workspace with apps/api, apps/web, 7 libs |
+| [ADR-002](./ADR-002-microservices-vs-monolith.md) | Microservices vs Monolith | Accepted | SCAFFOLD | **Modular Monolith** - NestJS app created, 0/7 context modules |
+| [ADR-003](./ADR-003-rest-vs-graphql.md) | REST vs GraphQL | Accepted | NOT STARTED | **REST** - 0/71 endpoints implemented |
+| [ADR-004](./ADR-004-session-vs-token-auth.md) | Session-based vs Token-based Auth | Accepted | INFRA DONE | **JWT** - Token service, blacklist, key rotation done; no auth controllers |
+| [ADR-005](./ADR-005-sql-vs-nosql.md) | SQL vs NoSQL | Accepted | CONFIG ONLY | **PostgreSQL** - TypeORM config done; 0 entities, 0 migrations |
 
 ### Domain-Driven Design Decisions
 
-| ADR | Title | Status | Summary |
-|-----|-------|--------|---------|
-| [ADR-006](./ADR-006-domain-driven-design-architecture.md) | Domain-Driven Design Architecture | Accepted | Adoption of DDD as primary architectural approach |
-| [ADR-007](./ADR-007-bounded-contexts-definition.md) | Bounded Contexts Definition | Accepted | 7 bounded contexts aligned with business capabilities |
-| [ADR-008](./ADR-008-aggregate-design-patterns.md) | Aggregate Design Patterns | Accepted | Aggregate catalog with invariants and boundaries |
-| [ADR-009](./ADR-009-domain-events-strategy.md) | Domain Events Strategy | Accepted | Hybrid event strategy (in-process + queue + WebSocket) |
-| [ADR-010](./ADR-010-repository-pattern-implementation.md) | Repository Pattern Implementation | Accepted | Repository pattern with 3-tier caching |
+| ADR | Title | Status | Implementation | Summary |
+|-----|-------|--------|----------------|---------|
+| [ADR-006](./ADR-006-domain-driven-design-architecture.md) | DDD Architecture | Accepted | PARTIAL | Shared kernel done (401 LOC); 0/7 context modules |
+| [ADR-007](./ADR-007-bounded-contexts-definition.md) | Bounded Contexts Definition | Accepted | NOT STARTED | 0/7 bounded contexts implemented |
+| [ADR-008](./ADR-008-aggregate-design-patterns.md) | Aggregate Design Patterns | Accepted | FOUNDATION | Base AggregateRoot class done; 0/14 aggregates |
+| [ADR-009](./ADR-009-domain-events-strategy.md) | Domain Events Strategy | Accepted | INFRA DONE | DomainEvent base, DLQ, idempotency, Bull publisher done; 0/~40 events |
+| [ADR-010](./ADR-010-repository-pattern-implementation.md) | Repository Pattern | Accepted | INFRA DONE | 3-tier cache + stampede protection done; 0 repository implementations |
 
 ### Operational & Infrastructure Decisions
 
-| ADR | Title | Status | Summary |
-|-----|-------|--------|---------|
-| [ADR-011](./ADR-011-deployment-infrastructure.md) | Deployment & Infrastructure | Accepted | Docker + Kubernetes with CI/CD, horizontal scaling, health checks |
-| [ADR-012](./ADR-012-observability-strategy.md) | Observability Strategy | Accepted | Structured logging (Pino), Prometheus metrics, OpenTelemetry tracing |
-| [ADR-013](./ADR-013-data-privacy-gdpr.md) | Data Privacy & GDPR | Accepted | Right to erasure, data portability, consent management, retention policies |
-| [ADR-014](./ADR-014-frontend-architecture.md) | Frontend Architecture | Accepted | React + TanStack Query + Zustand + Socket.IO client |
-| [ADR-015](./ADR-015-file-storage-architecture.md) | File Storage Architecture | Accepted | S3-compatible storage with Sharp image processing and CDN delivery |
-| [ADR-016](./ADR-016-email-delivery-infrastructure.md) | Email Delivery Infrastructure | Accepted | Bull Queue + Nodemailer + Handlebars templates with SES |
+| ADR | Title | Status | Implementation | Summary |
+|-----|-------|--------|----------------|---------|
+| [ADR-011](./ADR-011-deployment-infrastructure.md) | Deployment & Infrastructure | Accepted | NOT STARTED | No Dockerfile, docker-compose, or K8s manifests |
+| [ADR-012](./ADR-012-observability-strategy.md) | Observability Strategy | Accepted | NOT STARTED | No Pino, Prometheus, or OpenTelemetry configured |
+| [ADR-013](./ADR-013-data-privacy-gdpr.md) | Data Privacy & GDPR | Accepted | NOT STARTED | No consent, erasure, or export services |
+| [ADR-014](./ADR-014-frontend-architecture.md) | Frontend Architecture | Accepted | SCAFFOLD | Vite + React entry point only; no routing, components, or state |
+| [ADR-015](./ADR-015-file-storage-architecture.md) | File Storage | Accepted | NOT STARTED | No S3 upload, image processing, or CDN |
+| [ADR-016](./ADR-016-email-delivery-infrastructure.md) | Email Delivery | Accepted | NOT STARTED | No email service, templates, or queue consumer |
+
+### Implementation Legend
+
+| Tag | Meaning |
+|-----|---------|
+| DONE | Fully implemented per ADR specification |
+| INFRA DONE | Infrastructure/plumbing code complete, no business logic yet |
+| SCAFFOLD | Directory structure and minimal files created |
+| CONFIG ONLY | Configuration files exist, no functional code |
+| PARTIAL | Some components implemented |
+| NOT STARTED | No implementation work begun |
 
 ### Quality Assurance
 
