@@ -1,0 +1,7 @@
+{
+  "name": "domain-identity",
+  "$schema": "../../../node_modules/nx/schemas/project-schema.json",
+  "sourceRoot": "libs/domain/identity/src",
+  "projectType": "library",
+  "tags": ["scope:domain", "type:lib", "context:identity"]
+}

@@ -16,6 +16,13 @@ export default defineConfig({
   resolve: {
     alias: {
       '@csn/domain-shared': path.resolve(__dirname, 'libs/domain/shared/src'),
+      '@csn/domain-content': path.resolve(__dirname, 'libs/domain/content/src'),
+      '@csn/domain-notification': path.resolve(__dirname, 'libs/domain/notification/src'),
+      '@csn/domain-admin': path.resolve(__dirname, 'libs/domain/admin/src'),
+      '@csn/domain-community': path.resolve(__dirname, 'libs/domain/community/src'),
+      '@csn/domain-social-graph': path.resolve(__dirname, 'libs/domain/social-graph/src'),
+      '@csn/domain-profile': path.resolve(__dirname, 'libs/domain/profile/src'),
+      '@csn/domain-identity': path.resolve(__dirname, 'libs/domain/identity/src'),
       '@csn/infra-auth': path.resolve(__dirname, 'libs/infrastructure/auth/src'),
       '@csn/infra-cache': path.resolve(__dirname, 'libs/infrastructure/cache/src'),
       '@csn/infra-database': path.resolve(__dirname, 'libs/infrastructure/database/src'),

@@ -1,0 +1,24 @@
+{
+  "name": "domain-profile",
+  "$schema": "../../../node_modules/nx/schemas/project-schema.json",
+  "sourceRoot": "libs/domain/profile/src",
+  "projectType": "library",
+  "targets": {
+    "build": {
+      "executor": "@nx/js:tsc",
+      "outputs": ["{options.outputPath}"],
+      "options": {
+        "outputPath": "dist/libs/domain/profile",
+        "main": "libs/domain/profile/src/index.ts",
+        "tsConfig": "libs/domain/profile/tsconfig.lib.json"
+      }
+    },
+    "lint": {
+      "executor": "@nx/eslint:lint",
+      "options": {
+        "lintFilePatterns": ["libs/domain/profile/**/*.ts"]
+      }
+    }
+  },
+  "tags": ["scope:domain", "type:lib", "context:profile"]
+}

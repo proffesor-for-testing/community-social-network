@@ -1,0 +1,7 @@
+{
+  "name": "domain-social-graph",
+  "$schema": "../../../node_modules/nx/schemas/project-schema.json",
+  "sourceRoot": "libs/domain/social-graph/src",
+  "projectType": "library",
+  "tags": ["scope:domain", "type:lib", "context:social-graph"]
+}

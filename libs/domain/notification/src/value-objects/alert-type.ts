@@ -1,0 +1,9 @@
+export enum AlertType {
+  FOLLOW = 'FOLLOW',
+  LIKE = 'LIKE',
+  COMMENT = 'COMMENT',
+  MENTION = 'MENTION',
+  GROUP_INVITE = 'GROUP_INVITE',
+  GROUP_POST = 'GROUP_POST',
+  SYSTEM = 'SYSTEM',
+}

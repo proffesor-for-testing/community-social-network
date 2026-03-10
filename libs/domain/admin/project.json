@@ -1,0 +1,7 @@
+{
+  "name": "domain-admin",
+  "$schema": "../../../node_modules/nx/schemas/project-schema.json",
+  "sourceRoot": "libs/domain/admin/src",
+  "projectType": "library",
+  "tags": ["scope:domain", "type:lib", "context:admin"]
+}

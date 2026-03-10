@@ -1,0 +1,24 @@
+{
+  "name": "domain-community",
+  "$schema": "../../../node_modules/nx/schemas/project-schema.json",
+  "sourceRoot": "libs/domain/community/src",
+  "projectType": "library",
+  "targets": {
+    "build": {
+      "executor": "@nx/js:tsc",
+      "outputs": ["{options.outputPath}"],
+      "options": {
+        "outputPath": "dist/libs/domain/community",
+        "main": "libs/domain/community/src/index.ts",
+        "tsConfig": "libs/domain/community/tsconfig.lib.json"
+      }
+    },
+    "lint": {
+      "executor": "@nx/eslint:lint",
+      "options": {
+        "lintFilePatterns": ["libs/domain/community/**/*.ts"]
+      }
+    }
+  },
+  "tags": ["scope:domain", "type:lib", "context:community"]
+}
