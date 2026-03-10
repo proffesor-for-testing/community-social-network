@@ -4,6 +4,7 @@ import { JwtService as NestJwtService } from '@nestjs/jwt';
 import { randomUUID } from 'crypto';
 import jwtConfig from './jwt.config';
 import { TokenBlacklistService } from './token-blacklist.service';
+import { KeyRotationService } from './key-rotation.service';
 
 // ── Types ────────────────────────────────────────────────────────────────────
 
@@ -71,6 +72,7 @@ export class JwtTokenService {
     private readonly config: ConfigType<typeof jwtConfig>,
     private readonly nestJwtService: NestJwtService,
     private readonly blacklistService: TokenBlacklistService,
+    private readonly keyRotationService: KeyRotationService,
   ) {
     this.accessTtlSeconds = ttlToSeconds(this.config.accessTtl);
     this.refreshTtlSeconds = ttlToSeconds(this.config.refreshTtl);
@@ -81,6 +83,7 @@ export class JwtTokenService {
    */
   async generateAccessToken(payload: TokenPayload): Promise<string> {
     const jti = randomUUID();
+    const signingKey = await this.keyRotationService.getSigningKey();
 
     const token = this.nestJwtService.sign(
       {
@@ -90,7 +93,7 @@ export class JwtTokenService {
         jti,
       },
       {
-        secret: this.config.accessSecret,
+        secret: signingKey,
         expiresIn: this.config.accessTtl,
         issuer: this.config.issuer,
         audience: this.config.audience,
@@ -136,20 +139,24 @@ export class JwtTokenService {
    * Verify an access token: signature, expiry, issuer, audience, and blacklist.
    */
   async verifyAccessToken(token: string): Promise<AccessTokenPayload> {
-    let decoded: Record<string, unknown>;
+    const keys = await this.keyRotationService.getVerificationKeys();
+    let decoded: Record<string, unknown> | null = null;
 
-    try {
-      decoded = this.nestJwtService.verify(token, {
-        secret: this.config.accessSecret,
-        issuer: this.config.issuer,
-        audience: this.config.audience,
-      });
-    } catch (error: unknown) {
-      const message =
-        error instanceof Error && error.name === 'TokenExpiredError'
-          ? 'Access token has expired'
-          : 'Invalid access token';
-      throw new UnauthorizedException(message);
+    for (const key of keys) {
+      try {
+        decoded = this.nestJwtService.verify<Record<string, unknown>>(token, {
+          secret: key,
+          issuer: this.config.issuer,
+          audience: this.config.audience,
+        });
+        break;
+      } catch {
+        continue;
+      }
+    }
+
+    if (!decoded) {
+      throw new UnauthorizedException('Invalid or expired access token');
     }
 
     const jti = decoded.jti as string;

@@ -20,7 +20,7 @@ export { JwtAuthGuard, Public, IS_PUBLIC_KEY } from './auth.guard';
 export { CurrentUser } from './current-user.decorator';
 
 // Token blacklist service and Redis injection token
-export { TokenBlacklistService, REDIS_CLIENT } from './token-blacklist.service';
+export { TokenBlacklistService } from './token-blacklist.service';
 
 // Key rotation service
 export { KeyRotationService } from './key-rotation.service';

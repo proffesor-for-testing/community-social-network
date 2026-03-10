@@ -60,10 +60,17 @@ export const CACHE_SERVICE = Symbol('CACHE_SERVICE');
 export class RedisModule implements OnModuleDestroy {
   private readonly logger = new Logger(RedisModule.name);
 
-  constructor(@Inject(REDIS_CLIENT) private readonly redis: Redis) {}
+  constructor(
+    @Inject(REDIS_CLIENT) private readonly redis: Redis,
+    @Inject(CACHE_SERVICE) private readonly cacheService: ICacheService,
+  ) {}
 
   async onModuleDestroy(): Promise<void> {
     try {
+      // Destroy cache service (clears prune interval)
+      if ('destroy' in this.cacheService && typeof (this.cacheService as { destroy: unknown }).destroy === 'function') {
+        (this.cacheService as { destroy(): void }).destroy();
+      }
       await this.redis.quit();
       this.logger.log('Redis client disconnected gracefully');
     } catch (error) {

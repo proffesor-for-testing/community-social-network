@@ -41,7 +41,12 @@ export const JWT_VERIFY_FN = Symbol('JWT_VERIFY_FN');
  * dynamic room subscription/unsubscription.
  */
 @WebSocketGateway({
-  cors: true,
+  cors: {
+    origin: process.env['CORS_ALLOWED_ORIGINS']?.split(',') || [
+      'http://localhost:5173',
+    ],
+    credentials: true,
+  },
   namespace: '/events',
 })
 export class SocketIOGateway
@@ -117,6 +122,13 @@ export class SocketIOGateway
     room: string,
   ): Promise<{ event: string; data: { success: boolean } }> {
     if (!room || typeof room !== 'string') {
+      return { event: 'join-room', data: { success: false } };
+    }
+
+    // Prevent joining other users' personal rooms
+    const userId = (client.data as Record<string, unknown>)['userId'] as string;
+    if (room.startsWith('user:') && room !== `user:${userId}`) {
+      this.logger.warn(`Client ${client.id} attempted to join unauthorized room "${room}"`);
       return { event: 'join-room', data: { success: false } };
     }
 

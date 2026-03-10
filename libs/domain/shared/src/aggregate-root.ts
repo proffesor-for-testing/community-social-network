@@ -13,6 +13,13 @@ export abstract class AggregateRoot<T> extends Entity<T> {
     return this._version;
   }
 
+  /**
+   * Set the version when reconstituting an aggregate from persistence.
+   */
+  protected setVersion(version: number): void {
+    this._version = version;
+  }
+
   protected addDomainEvent(event: DomainEvent): void {
     this._domainEvents.push(event);
   }

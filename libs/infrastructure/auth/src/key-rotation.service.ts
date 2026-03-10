@@ -3,7 +3,7 @@ import { ConfigType } from '@nestjs/config';
 import { Redis } from 'ioredis';
 import { randomBytes, randomUUID } from 'crypto';
 import jwtConfig from './jwt.config';
-import { REDIS_CLIENT } from './token-blacklist.service';
+import { REDIS_CLIENT } from '@csn/infra-cache';
 
 /** Redis key for the current active key ID. */
 const CURRENT_KEY_ID_KEY = 'auth:keys:current';

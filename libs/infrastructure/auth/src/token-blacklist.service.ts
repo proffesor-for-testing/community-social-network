@@ -1,13 +1,6 @@
 import { Injectable, Inject, Logger } from '@nestjs/common';
 import { Redis } from 'ioredis';
-
-/**
- * Injection token for the Redis client instance.
- * This should match the token used in the cache infrastructure module.
- * If the cache module uses a different token, update this constant
- * or provide an alias in the module configuration.
- */
-export const REDIS_CLIENT = 'REDIS_CLIENT';
+import { REDIS_CLIENT } from '@csn/infra-cache';
 
 /** Redis key prefix for blacklisted token JTIs. */
 const BLACKLIST_PREFIX = 'token:blacklist:';
@@ -67,23 +60,24 @@ export class TokenBlacklistService {
       cursor = nextCursor;
 
       if (keys.length > 0) {
-        const pipeline = this.redis.pipeline();
-
+        // Batch fetch TTLs via pipeline to avoid N+1
+        const ttlPipeline = this.redis.pipeline();
         for (const key of keys) {
-          // Extract the jti from the key: 'token:user:{userId}:{jti}'
-          const jti = key.substring(key.lastIndexOf(':') + 1);
-
-          // Get the TTL of the user-token tracking key to use for the blacklist entry
-          const ttl = await this.redis.ttl(key);
-          if (ttl > 0) {
-            pipeline.set(`${BLACKLIST_PREFIX}${jti}`, '1', 'EX', ttl);
-          }
-
-          // Remove the user-token tracking key
-          pipeline.del(key);
+          ttlPipeline.ttl(key);
         }
+        const ttlResults = await ttlPipeline.exec();
 
-        await pipeline.exec();
+        const blacklistPipeline = this.redis.pipeline();
+        for (let i = 0; i < keys.length; i++) {
+          const key = keys[i];
+          const jti = key.substring(key.lastIndexOf(':') + 1);
+          const ttl = ttlResults?.[i]?.[1] as number ?? 0;
+          if (ttl > 0) {
+            blacklistPipeline.set(`${BLACKLIST_PREFIX}${jti}`, '1', 'EX', ttl);
+          }
+          blacklistPipeline.del(key);
+        }
+        await blacklistPipeline.exec();
         totalBlacklisted += keys.length;
       }
     } while (cursor !== '0');
