@@ -1,6 +1,182 @@
 {
   "graph": {
     "nodes": {
+      "infra-messaging": {
+        "name": "infra-messaging",
+        "type": "lib",
+        "data": {
+          "root": "libs/infrastructure/messaging",
+          "targets": {
+            "build": {
+              "executor": "@nx/js:tsc",
+              "dependsOn": [
+                "^build"
+              ],
+              "cache": true,
+              "outputs": [
+                "{options.outputPath}"
+              ],
+              "options": {
+                "outputPath": "dist/libs/infrastructure/messaging",
+                "main": "libs/infrastructure/messaging/src/index.ts",
+                "tsConfig": "libs/infrastructure/messaging/tsconfig.lib.json"
+              },
+              "configurations": {}
+            },
+            "lint": {
+              "executor": "@nx/eslint:lint",
+              "cache": true,
+              "options": {
+                "lintFilePatterns": [
+                  "libs/infrastructure/messaging/**/*.ts"
+                ]
+              },
+              "configurations": {}
+            }
+          },
+          "name": "infra-messaging",
+          "$schema": "../../../node_modules/nx/schemas/project-schema.json",
+          "sourceRoot": "libs/infrastructure/messaging/src",
+          "projectType": "library",
+          "tags": [
+            "scope:infra",
+            "type:lib"
+          ],
+          "implicitDependencies": []
+        }
+      },
+      "infra-database": {
+        "name": "infra-database",
+        "type": "lib",
+        "data": {
+          "root": "libs/infrastructure/database",
+          "targets": {
+            "build": {
+              "executor": "@nx/js:tsc",
+              "dependsOn": [
+                "^build"
+              ],
+              "cache": true,
+              "outputs": [
+                "{options.outputPath}"
+              ],
+              "options": {
+                "outputPath": "dist/libs/infrastructure/database",
+                "main": "libs/infrastructure/database/src/index.ts",
+                "tsConfig": "libs/infrastructure/database/tsconfig.lib.json"
+              },
+              "configurations": {}
+            },
+            "lint": {
+              "executor": "@nx/eslint:lint",
+              "cache": true,
+              "options": {
+                "lintFilePatterns": [
+                  "libs/infrastructure/database/**/*.ts"
+                ]
+              },
+              "configurations": {}
+            }
+          },
+          "name": "infra-database",
+          "$schema": "../../../../node_modules/nx/schemas/project-schema.json",
+          "sourceRoot": "libs/infrastructure/database/src",
+          "projectType": "library",
+          "tags": [
+            "scope:infra",
+            "type:lib"
+          ],
+          "implicitDependencies": []
+        }
+      },
+      "infra-cache": {
+        "name": "infra-cache",
+        "type": "lib",
+        "data": {
+          "root": "libs/infrastructure/cache",
+          "targets": {
+            "build": {
+              "executor": "@nx/js:tsc",
+              "dependsOn": [
+                "^build"
+              ],
+              "cache": true,
+              "outputs": [
+                "{options.outputPath}"
+              ],
+              "options": {
+                "outputPath": "dist/libs/infrastructure/cache",
+                "main": "libs/infrastructure/cache/src/index.ts",
+                "tsConfig": "libs/infrastructure/cache/tsconfig.lib.json"
+              },
+              "configurations": {}
+            },
+            "lint": {
+              "executor": "@nx/eslint:lint",
+              "cache": true,
+              "options": {
+                "lintFilePatterns": [
+                  "libs/infrastructure/cache/**/*.ts"
+                ]
+              },
+              "configurations": {}
+            }
+          },
+          "name": "infra-cache",
+          "$schema": "../../../../node_modules/nx/schemas/project-schema.json",
+          "sourceRoot": "libs/infrastructure/cache/src",
+          "projectType": "library",
+          "tags": [
+            "scope:infra",
+            "type:lib"
+          ],
+          "implicitDependencies": []
+        }
+      },
+      "infra-auth": {
+        "name": "infra-auth",
+        "type": "lib",
+        "data": {
+          "root": "libs/infrastructure/auth",
+          "targets": {
+            "build": {
+              "executor": "@nx/js:tsc",
+              "dependsOn": [
+                "^build"
+              ],
+              "cache": true,
+              "outputs": [
+                "{options.outputPath}"
+              ],
+              "options": {
+                "outputPath": "dist/libs/infrastructure/auth",
+                "main": "libs/infrastructure/auth/src/index.ts",
+                "tsConfig": "libs/infrastructure/auth/tsconfig.lib.json"
+              },
+              "configurations": {}
+            },
+            "lint": {
+              "executor": "@nx/eslint:lint",
+              "cache": true,
+              "options": {
+                "lintFilePatterns": [
+                  "libs/infrastructure/auth/**/*.ts"
+                ]
+              },
+              "configurations": {}
+            }
+          },
+          "name": "infra-auth",
+          "$schema": "../../../../node_modules/nx/schemas/project-schema.json",
+          "sourceRoot": "libs/infrastructure/auth/src",
+          "projectType": "library",
+          "tags": [
+            "scope:infra",
+            "type:lib"
+          ],
+          "implicitDependencies": []
+        }
+      },
       "shared-constants": {
         "name": "shared-constants",
         "type": "lib",
@@ -40,6 +216,50 @@
           "projectType": "library",
           "tags": [
             "scope:shared",
+            "type:lib"
+          ],
+          "implicitDependencies": []
+        }
+      },
+      "domain-shared": {
+        "name": "domain-shared",
+        "type": "lib",
+        "data": {
+          "root": "libs/domain/shared",
+          "targets": {
+            "build": {
+              "executor": "@nx/js:tsc",
+              "dependsOn": [
+                "^build"
+              ],
+              "cache": true,
+              "outputs": [
+                "{options.outputPath}"
+              ],
+              "options": {
+                "outputPath": "dist/libs/domain/shared",
+                "main": "libs/domain/shared/src/index.ts",
+                "tsConfig": "libs/domain/shared/tsconfig.lib.json"
+              },
+              "configurations": {}
+            },
+            "lint": {
+              "executor": "@nx/eslint:lint",
+              "cache": true,
+              "options": {
+                "lintFilePatterns": [
+                  "libs/domain/shared/**/*.ts"
+                ]
+              },
+              "configurations": {}
+            }
+          },
+          "name": "domain-shared",
+          "$schema": "../../../../node_modules/nx/schemas/project-schema.json",
+          "sourceRoot": "libs/domain/shared/src",
+          "projectType": "library",
+          "tags": [
+            "scope:domain",
             "type:lib"
           ],
           "implicitDependencies": []
@@ -252,10 +472,42 @@
       }
     },
     "dependencies": {
+      "infra-messaging": [],
+      "infra-database": [],
+      "infra-cache": [],
+      "infra-auth": [
+        {
+          "source": "infra-auth",
+          "target": "infra-cache",
+          "type": "static"
+        }
+      ],
       "shared-constants": [],
+      "domain-shared": [],
       "shared-types": [],
       "shared-utils": [],
-      "api": [],
+      "api": [
+        {
+          "source": "api",
+          "target": "infra-auth",
+          "type": "static"
+        },
+        {
+          "source": "api",
+          "target": "infra-cache",
+          "type": "static"
+        },
+        {
+          "source": "api",
+          "target": "infra-database",
+          "type": "static"
+        },
+        {
+          "source": "api",
+          "target": "infra-messaging",
+          "type": "static"
+        }
+      ],
       "web": []
     }
   },
