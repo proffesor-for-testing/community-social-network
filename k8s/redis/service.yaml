@@ -1,0 +1,20 @@
+# =============================================================================
+# CSN Redis - Kubernetes Service
+# =============================================================================
+apiVersion: v1
+kind: Service
+metadata:
+  name: csn-redis
+  namespace: csn
+  labels:
+    app: csn-redis
+    component: cache
+spec:
+  type: ClusterIP
+  selector:
+    app: csn-redis
+  ports:
+    - name: redis
+      port: 6379
+      targetPort: redis
+      protocol: TCP

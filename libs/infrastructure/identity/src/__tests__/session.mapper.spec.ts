@@ -14,6 +14,8 @@ describe('SessionMapper', () => {
     return Session.reconstitute(
       SessionId.create(sessionIdStr),
       MemberId.create(memberIdStr),
+      'Mozilla/5.0',
+      '192.168.1.1',
       Timestamp.fromDate(new Date('2025-06-01T10:00:00Z')),
       Timestamp.fromDate(new Date('2025-06-08T10:00:00Z')),
       isRevoked,
@@ -41,6 +43,8 @@ describe('SessionMapper', () => {
 
       expect(entity.id).toBe(sessionIdStr);
       expect(entity.memberId).toBe(memberIdStr);
+      expect(entity.userAgent).toBe('Mozilla/5.0');
+      expect(entity.ipAddress).toBe('192.168.1.1');
       expect(entity.expiresAt).toEqual(new Date('2025-06-08T10:00:00Z'));
       expect(entity.revokedAt).toBeNull();
       expect(entity.createdAt).toEqual(new Date('2025-06-01T10:00:00Z'));
@@ -63,6 +67,8 @@ describe('SessionMapper', () => {
 
       expect(session.id.value).toBe(sessionIdStr);
       expect(session.memberId.value).toBe(memberIdStr);
+      expect(session.userAgent).toBe('Mozilla/5.0');
+      expect(session.ipAddress).toBe('192.168.1.1');
       expect(session.createdAt.value).toEqual(
         new Date('2025-06-01T10:00:00Z'),
       );
@@ -89,6 +95,8 @@ describe('SessionMapper', () => {
 
       expect(restored.id.value).toBe(original.id.value);
       expect(restored.memberId.value).toBe(original.memberId.value);
+      expect(restored.userAgent).toBe(original.userAgent);
+      expect(restored.ipAddress).toBe(original.ipAddress);
       expect(restored.createdAt.value.getTime()).toBe(
         original.createdAt.value.getTime(),
       );
@@ -114,6 +122,8 @@ describe('SessionMapper', () => {
 
       expect(restored.id).toBe(original.id);
       expect(restored.memberId).toBe(original.memberId);
+      expect(restored.userAgent).toBe(original.userAgent);
+      expect(restored.ipAddress).toBe(original.ipAddress);
       expect(restored.expiresAt.getTime()).toBe(original.expiresAt.getTime());
       expect(restored.createdAt.getTime()).toBe(original.createdAt.getTime());
       expect(restored.version).toBe(original.version);

@@ -12,7 +12,7 @@ export class CreateContentTables1710000002000 implements MigrationInterface {
         "visibility" varchar(32) NOT NULL DEFAULT 'PUBLIC',
         "created_at" timestamp NOT NULL DEFAULT now(),
         "updated_at" timestamp NOT NULL DEFAULT now(),
-        "version" int NOT NULL DEFAULT 0,
+        "version" int NOT NULL DEFAULT 1,
         CONSTRAINT "PK_publications" PRIMARY KEY ("id")
       )
     `);
@@ -86,7 +86,7 @@ export class CreateContentTables1710000002000 implements MigrationInterface {
         "content" text NOT NULL,
         "status" varchar(32) NOT NULL DEFAULT 'ACTIVE',
         "created_at" timestamp NOT NULL DEFAULT now(),
-        "version" int NOT NULL DEFAULT 0,
+        "version" int NOT NULL DEFAULT 1,
         CONSTRAINT "PK_discussions" PRIMARY KEY ("id"),
         CONSTRAINT "FK_discussions_publication"
           FOREIGN KEY ("publication_id")

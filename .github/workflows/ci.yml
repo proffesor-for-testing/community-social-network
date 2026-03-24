@@ -1,0 +1,207 @@
+# =============================================================================
+# CSN - Continuous Integration Pipeline
+# =============================================================================
+name: CI
+
+on:
+  push:
+    branches: ["*"]
+  pull_request:
+    branches: [main]
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  NODE_VERSION: "20"
+  NX_CLOUD_ACCESS_TOKEN: ${{ secrets.NX_CLOUD_ACCESS_TOKEN }}
+
+jobs:
+  # ---------------------------------------------------------------------------
+  # Lint: code style and static analysis
+  # ---------------------------------------------------------------------------
+  lint:
+    name: Lint
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Derive NX SHAs for affected
+        uses: nrwl/nx-set-shas@v4
+
+      - name: Run lint
+        run: npx nx affected --target=lint --parallel=3
+
+  # ---------------------------------------------------------------------------
+  # Test: unit and integration tests with PostgreSQL and Redis services
+  # ---------------------------------------------------------------------------
+  test:
+    name: Test
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:15-alpine
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: csn_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    env:
+      NODE_ENV: test
+      DB_HOST: localhost
+      DB_PORT: 5432
+      DB_USERNAME: postgres
+      DB_PASSWORD: postgres
+      DB_DATABASE: csn_test
+      REDIS_HOST: localhost
+      REDIS_PORT: 6379
+      JWT_SECRET: ci-test-jwt-secret
+      JWT_REFRESH_SECRET: ci-test-refresh-secret
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Derive NX SHAs for affected
+        uses: nrwl/nx-set-shas@v4
+
+      - name: Run tests
+        run: npx nx affected --target=test --parallel=3 --run
+
+      - name: Upload coverage report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-report
+          path: coverage/
+          retention-days: 7
+
+  # ---------------------------------------------------------------------------
+  # Build: verify that all applications compile
+  # ---------------------------------------------------------------------------
+  build:
+    name: Build
+    runs-on: ubuntu-latest
+    needs: [lint, test]
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Derive NX SHAs for affected
+        uses: nrwl/nx-set-shas@v4
+
+      - name: Build affected projects
+        run: npx nx affected --target=build --parallel=3
+
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: dist
+          path: dist/
+          retention-days: 1
+
+  # ---------------------------------------------------------------------------
+  # Architecture tests: verify domain purity (no framework imports in domain)
+  # ---------------------------------------------------------------------------
+  architecture-tests:
+    name: Architecture Tests
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Check domain purity - no NestJS imports in domain layer
+        run: |
+          echo "Checking domain layer for framework imports..."
+          VIOLATIONS=$(grep -r "@nestjs" libs/domain/ --include="*.ts" -l 2>/dev/null || true)
+          if [ -n "$VIOLATIONS" ]; then
+            echo "DOMAIN PURITY VIOLATION: Framework imports found in domain layer:"
+            echo "$VIOLATIONS"
+            exit 1
+          fi
+          echo "Domain purity check passed - no framework imports found."
+
+      - name: Check domain layer does not import from infrastructure
+        run: |
+          echo "Checking domain layer for infrastructure imports..."
+          VIOLATIONS=$(grep -r "@csn/infra-" libs/domain/ --include="*.ts" -l 2>/dev/null || true)
+          if [ -n "$VIOLATIONS" ]; then
+            echo "ARCHITECTURE VIOLATION: Domain layer imports infrastructure:"
+            echo "$VIOLATIONS"
+            exit 1
+          fi
+          echo "Architecture check passed - domain does not import infrastructure."
+
+      - name: Check no circular dependencies between bounded contexts
+        run: |
+          echo "Checking for cross-context domain imports..."
+          CONTEXTS=("identity" "profile" "content" "social-graph" "community" "notification" "admin")
+          FOUND_VIOLATIONS=false
+          for ctx in "${CONTEXTS[@]}"; do
+            for other in "${CONTEXTS[@]}"; do
+              if [ "$ctx" != "$other" ]; then
+                VIOLATIONS=$(grep -r "@csn/domain-${other}" "libs/domain/${ctx}/" --include="*.ts" -l 2>/dev/null || true)
+                if [ -n "$VIOLATIONS" ]; then
+                  echo "CROSS-CONTEXT VIOLATION: domain/${ctx} imports domain/${other}"
+                  echo "$VIOLATIONS"
+                  FOUND_VIOLATIONS=true
+                fi
+              fi
+            done
+          done
+          if [ "$FOUND_VIOLATIONS" = true ]; then
+            exit 1
+          fi
+          echo "No cross-context domain violations found."

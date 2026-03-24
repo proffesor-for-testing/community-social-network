@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Welcome to Community Social Network</title>
+</head>
+<body style="margin: 0; padding: 0; background-color: #f4f4f7; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;">
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color: #f4f4f7;">
+    <tr>
+      <td align="center" style="padding: 40px 0;">
+        <table role="presentation" width="600" cellpadding="0" cellspacing="0" style="background-color: #ffffff; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.08);">
+          <!-- Header -->
+          <tr>
+            <td style="background-color: #4f46e5; padding: 32px 40px; text-align: center;">
+              <h1 style="color: #ffffff; margin: 0; font-size: 24px; font-weight: 600;">Community Social Network</h1>
+            </td>
+          </tr>
+          <!-- Body -->
+          <tr>
+            <td style="padding: 40px;">
+              <h2 style="color: #1a1a2e; margin: 0 0 16px 0; font-size: 20px;">Welcome, {{ displayName }}!</h2>
+              <p style="color: #4a4a68; line-height: 1.6; margin: 0 0 16px 0;">
+                We are thrilled to have you join our community. Your account has been created successfully and you are all set to start connecting with others.
+              </p>
+              <p style="color: #4a4a68; line-height: 1.6; margin: 0 0 24px 0;">
+                Here are a few things you can do to get started:
+              </p>
+              <ul style="color: #4a4a68; line-height: 1.8; margin: 0 0 24px 0; padding-left: 20px;">
+                <li>Complete your profile with a photo and bio</li>
+                <li>Browse and join communities that interest you</li>
+                <li>Connect with other members</li>
+                <li>Share your first publication</li>
+              </ul>
+              <table role="presentation" cellpadding="0" cellspacing="0" style="margin: 0 auto;">
+                <tr>
+                  <td style="background-color: #4f46e5; border-radius: 6px;">
+                    <a href="{{ loginUrl }}" style="display: inline-block; padding: 14px 32px; color: #ffffff; text-decoration: none; font-weight: 600; font-size: 16px;">Get Started</a>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+          <!-- Footer -->
+          <tr>
+            <td style="padding: 24px 40px; background-color: #f8f8fa; border-top: 1px solid #e8e8ed;">
+              <p style="color: #8888a0; font-size: 13px; margin: 0; text-align: center;">
+                &copy; {{ year }} Community Social Network. All rights reserved.
+              </p>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>

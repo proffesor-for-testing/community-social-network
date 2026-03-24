@@ -5,7 +5,7 @@ export default defineConfig({
   test: {
     globals: true,
     environment: 'node',
-    include: ['libs/**/*.spec.ts', 'apps/**/*.spec.ts'],
+    include: ['libs/**/*.spec.ts', 'apps/**/*.spec.ts', 'tests/**/*.spec.ts'],
     coverage: {
       provider: 'v8',
       reporter: ['text', 'lcov'],
@@ -35,6 +35,10 @@ export default defineConfig({
       '@csn/infra-cache': path.resolve(__dirname, 'libs/infrastructure/cache/src'),
       '@csn/infra-database': path.resolve(__dirname, 'libs/infrastructure/database/src'),
       '@csn/infra-messaging': path.resolve(__dirname, 'libs/infrastructure/messaging/src'),
+      '@csn/infra-observability': path.resolve(__dirname, 'libs/infrastructure/observability/src'),
+      '@csn/infra-gdpr': path.resolve(__dirname, 'libs/infrastructure/gdpr/src'),
+      '@csn/infra-storage': path.resolve(__dirname, 'libs/infrastructure/storage/src'),
+      '@csn/infra-email': path.resolve(__dirname, 'libs/infrastructure/email/src'),
       '@csn/shared-types': path.resolve(__dirname, 'libs/shared/types/src'),
       '@csn/shared-utils': path.resolve(__dirname, 'libs/shared/utils/src'),
       '@csn/shared-constants': path.resolve(__dirname, 'libs/shared/constants/src'),

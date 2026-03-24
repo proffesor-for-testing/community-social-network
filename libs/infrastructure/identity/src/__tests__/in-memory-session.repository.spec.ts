@@ -20,6 +20,8 @@ describe('InMemorySessionRepository', () => {
         overrides?.id ?? '660e8400-e29b-41d4-a716-446655440001',
       ),
       MemberId.create(overrides?.memberId ?? memberIdStr),
+      'Mozilla/5.0 Test',
+      '127.0.0.1',
       Timestamp.fromDate(new Date('2025-06-01T10:00:00Z')),
       Timestamp.fromDate(
         overrides?.expiresAt ?? new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),

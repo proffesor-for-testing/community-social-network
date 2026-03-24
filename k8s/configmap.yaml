@@ -1,0 +1,42 @@
+# =============================================================================
+# CSN - Non-Secret Configuration
+# =============================================================================
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: csn-config
+  namespace: csn
+  labels:
+    app: csn
+    part-of: community-social-network
+data:
+  # Application
+  NODE_ENV: "production"
+  PORT: "3000"
+  LOG_LEVEL: "info"
+
+  # Database connection (host/port only; credentials in secrets)
+  DB_HOST: "csn-postgres"
+  DB_PORT: "5432"
+  DB_DATABASE: "csn_prod"
+
+  # Redis connection (host/port only; password in secrets if needed)
+  REDIS_HOST: "csn-redis"
+  REDIS_PORT: "6379"
+
+  # JWT timing (secrets in secrets.yaml)
+  JWT_EXPIRATION: "15m"
+  JWT_REFRESH_EXPIRATION: "7d"
+
+  # CORS
+  CORS_ALLOWED_ORIGINS: "https://csn.example.com"
+
+  # S3 / File storage (non-secret)
+  S3_BUCKET: "csn-uploads-prod"
+  S3_REGION: "us-east-1"
+
+  # Email (non-secret)
+  SMTP_HOST: "smtp.example.com"
+  SMTP_PORT: "587"
+  SMTP_FROM: "noreply@csn.example.com"
+  SMTP_SECURE: "true"

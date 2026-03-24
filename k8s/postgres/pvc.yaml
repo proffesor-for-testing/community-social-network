@@ -1,0 +1,23 @@
+# =============================================================================
+# CSN PostgreSQL - PersistentVolumeClaim
+# =============================================================================
+# Note: The StatefulSet uses volumeClaimTemplates which auto-create PVCs.
+# This standalone PVC is provided for manual provisioning scenarios or
+# environments where StatefulSet volume templates are not preferred.
+# =============================================================================
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: csn-postgres-data
+  namespace: csn
+  labels:
+    app: csn-postgres
+    component: database
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 10Gi
+  # Uncomment and set your storage class if needed:
+  # storageClassName: gp3

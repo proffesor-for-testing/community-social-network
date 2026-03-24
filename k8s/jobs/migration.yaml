@@ -1,0 +1,69 @@
+# =============================================================================
+# CSN Database Migration - Kubernetes Job
+# =============================================================================
+# Run migrations as a separate Job, not on application startup.
+# Usage: kubectl apply -f k8s/jobs/migration.yaml
+# =============================================================================
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: csn-migration
+  namespace: csn
+  labels:
+    app: csn-api
+    component: migration
+    part-of: community-social-network
+spec:
+  backoffLimit: 3
+  activeDeadlineSeconds: 300
+  ttlSecondsAfterFinished: 3600
+  template:
+    metadata:
+      labels:
+        app: csn-api
+        component: migration
+    spec:
+      restartPolicy: OnFailure
+      containers:
+        - name: migration
+          image: ghcr.io/csn/api:latest
+          command: ["node"]
+          args:
+            - "-e"
+            - |
+              const { DataSource } = require('typeorm');
+              const path = require('path');
+
+              const ds = new DataSource({
+                type: 'postgres',
+                host: process.env.DB_HOST,
+                port: parseInt(process.env.DB_PORT || '5432'),
+                username: process.env.DB_USERNAME,
+                password: process.env.DB_PASSWORD,
+                database: process.env.DB_DATABASE,
+                migrations: [path.join(__dirname, 'dist', '**', 'migrations', '*.js')],
+                migrationsTableName: 'typeorm_migrations',
+              });
+
+              ds.initialize()
+                .then(() => ds.runMigrations())
+                .then((migrations) => {
+                  console.log(`Applied ${migrations.length} migration(s)`);
+                  process.exit(0);
+                })
+                .catch((err) => {
+                  console.error('Migration failed:', err);
+                  process.exit(1);
+                });
+          envFrom:
+            - configMapRef:
+                name: csn-config
+            - secretRef:
+                name: csn-secrets
+          resources:
+            requests:
+              cpu: 100m
+              memory: 128Mi
+            limits:
+              cpu: 500m
+              memory: 256Mi

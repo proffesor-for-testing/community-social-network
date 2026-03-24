@@ -1,0 +1,74 @@
+# =============================================================================
+# CSN - Kubernetes Ingress (nginx-ingress-controller)
+# =============================================================================
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: csn-ingress
+  namespace: csn
+  labels:
+    app: csn
+    part-of: community-social-network
+  annotations:
+    # TLS with cert-manager
+    cert-manager.io/cluster-issuer: letsencrypt-prod
+    # Nginx ingress annotations
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+    nginx.ingress.kubernetes.io/use-regex: "true"
+    # WebSocket support
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "3600"
+    nginx.ingress.kubernetes.io/proxy-send-timeout: "3600"
+    nginx.ingress.kubernetes.io/proxy-connect-timeout: "30"
+    # Request size limit (file uploads)
+    nginx.ingress.kubernetes.io/proxy-body-size: "50m"
+    # Rate limiting
+    nginx.ingress.kubernetes.io/limit-rps: "50"
+    nginx.ingress.kubernetes.io/limit-burst-multiplier: "5"
+    # Security headers
+    nginx.ingress.kubernetes.io/configuration-snippet: |
+      more_set_headers "X-Frame-Options: SAMEORIGIN";
+      more_set_headers "X-Content-Type-Options: nosniff";
+      more_set_headers "X-XSS-Protection: 1; mode=block";
+      more_set_headers "Referrer-Policy: strict-origin-when-cross-origin";
+spec:
+  ingressClassName: nginx
+  tls:
+    - hosts:
+        - csn.example.com
+      secretName: csn-tls
+  rules:
+    - host: csn.example.com
+      http:
+        paths:
+          # API routes
+          - path: /api(/|$)(.*)
+            pathType: ImplementationSpecific
+            backend:
+              service:
+                name: csn-api
+                port:
+                  number: 3000
+          # WebSocket route (Socket.IO)
+          - path: /socket.io(/|$)(.*)
+            pathType: ImplementationSpecific
+            backend:
+              service:
+                name: csn-api
+                port:
+                  number: 3000
+          # Health check (API)
+          - path: /health
+            pathType: Prefix
+            backend:
+              service:
+                name: csn-api
+                port:
+                  number: 3000
+          # Frontend (catch-all, must be last)
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: csn-web
+                port:
+                  number: 80

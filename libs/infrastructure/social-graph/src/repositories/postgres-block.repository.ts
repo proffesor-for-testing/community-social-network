@@ -22,6 +22,15 @@ export class PostgresBlockRepository
     return { id: id.value } as FindOptionsWhere<BlockEntity>;
   }
 
+  async findByBlocker(blockerId: UserId): Promise<Block[]> {
+    const entities = await this.ormRepository.find({
+      where: {
+        blockerId: blockerId.value,
+      } as FindOptionsWhere<BlockEntity>,
+    });
+    return entities.map((entity) => this.mapper.toDomain(entity));
+  }
+
   async findByBlockerAndBlocked(
     blockerId: UserId,
     blockedId: UserId,

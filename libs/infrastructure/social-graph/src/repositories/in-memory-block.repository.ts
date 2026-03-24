@@ -31,6 +31,16 @@ export class InMemoryBlockRepository implements IBlockRepository {
     this.store.delete(aggregate.id.value);
   }
 
+  async findByBlocker(blockerId: UserId): Promise<Block[]> {
+    const results: Block[] = [];
+    for (const entity of this.store.values()) {
+      if (entity.blockerId === blockerId.value) {
+        results.push(this.mapper.toDomain(entity));
+      }
+    }
+    return results;
+  }
+
   async findByBlockerAndBlocked(
     blockerId: UserId,
     blockedId: UserId,

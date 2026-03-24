@@ -9,6 +9,7 @@ import { PreferenceEntity } from '../entities/preference.entity';
 
 /**
  * Maps between the Preference domain aggregate and the PreferenceEntity persistence model.
+ * Uses Preference.reconstitute() for safe, compile-time-checked domain reconstruction.
  *
  * The channelPreferences Map<string, DeliveryChannel[]> is serialized to/from a
  * plain JSON object stored in a jsonb column.
@@ -17,13 +18,6 @@ export class PreferenceMapper
   implements AggregateMapper<Preference, PreferenceEntity>
 {
   toDomain(raw: PreferenceEntity): Preference {
-    const preference = Object.create(Preference.prototype) as Preference;
-
-    const record = preference as Record<string, unknown>;
-    record['_id'] = PreferenceId.create(raw.id);
-    record['id'] = PreferenceId.create(raw.id);
-    record['_memberId'] = UserId.create(raw.memberId);
-
     // Reconstitute the Map from the jsonb object
     const channelMap = new Map<string, DeliveryChannel[]>();
     if (raw.channelPreferences) {
@@ -34,15 +28,14 @@ export class PreferenceMapper
         );
       }
     }
-    record['_channelPreferences'] = channelMap;
 
-    record['_mutedUntil'] = raw.mutedUntil
-      ? Timestamp.fromDate(raw.mutedUntil)
-      : null;
-    record['_domainEvents'] = [];
-    record['_version'] = raw.version;
-
-    return preference;
+    return Preference.reconstitute(
+      PreferenceId.create(raw.id),
+      UserId.create(raw.memberId),
+      channelMap,
+      raw.mutedUntil ? Timestamp.fromDate(raw.mutedUntil) : null,
+      raw.version,
+    );
   }
 
   toPersistence(domain: Preference): PreferenceEntity {

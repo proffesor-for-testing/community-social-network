@@ -6,7 +6,7 @@ import {
   PublicationId,
   IPublicationRepository,
 } from '@csn/domain-content';
-import { BaseRepository, OptimisticLockError } from '@csn/infra-shared';
+import { BaseRepository } from '@csn/infra-shared';
 import { PublicationEntity } from '../entities/publication.entity';
 import { MentionEntity } from '../entities/mention.entity';
 import { ReactionEntity } from '../entities/reaction.entity';
@@ -74,26 +74,15 @@ export class PostgresPublicationRepository
   }
 
   async save(aggregate: Publication): Promise<void> {
+    // Delegate to BaseRepository.save() for atomic optimistic locking on the
+    // publication entity. The entityMapper adapter (set up in the constructor)
+    // extracts just the PublicationEntity from the bundle for persistence.
+    await super.save(aggregate);
+
+    // Replace mentions: delete existing, then bulk insert new ones.
+    // This is done after the publication save so that a version conflict
+    // aborts before touching mention data.
     const bundle = this.publicationMapper.toPersistence(aggregate);
-    const currentVersion = aggregate.version;
-
-    // Optimistic lock check for updates
-    if (currentVersion > 1) {
-      const existing = await this.ormRepository.findOne({
-        where: this.idCondition(aggregate.id),
-      });
-      if (existing && existing.version !== currentVersion - 1) {
-        throw new OptimisticLockError(
-          aggregate.constructor.name,
-          aggregate.id.value,
-        );
-      }
-    }
-
-    // Save the publication entity
-    await this.ormRepository.save(bundle.publication);
-
-    // Replace mentions: delete existing, then bulk insert new ones
     await this.mentionRepository.delete({
       publicationId: aggregate.id.value,
     } as FindOptionsWhere<MentionEntity>);

@@ -10,6 +10,8 @@ export class SessionMapper implements AggregateMapper<Session, SessionEntity> {
     return Session.reconstitute(
       SessionId.create(raw.id),
       MemberId.create(raw.memberId),
+      raw.userAgent,
+      raw.ipAddress,
       Timestamp.fromDate(raw.createdAt),
       Timestamp.fromDate(raw.expiresAt),
       isRevoked,
@@ -21,8 +23,8 @@ export class SessionMapper implements AggregateMapper<Session, SessionEntity> {
     const entity = new SessionEntity();
     entity.id = domain.id.value;
     entity.memberId = domain.memberId.value;
-    entity.userAgent = '';
-    entity.ipAddress = '';
+    entity.userAgent = domain.userAgent;
+    entity.ipAddress = domain.ipAddress;
     entity.expiresAt = domain.expiresAt.value;
     entity.revokedAt = domain.isRevoked ? new Date() : null;
     entity.createdAt = domain.createdAt.value;

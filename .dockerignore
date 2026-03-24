@@ -1,0 +1,57 @@
+# =============================================================================
+# Docker Build Context Exclusions
+# =============================================================================
+
+# Dependencies (will be installed inside container)
+node_modules
+.npm
+
+# Build artifacts
+dist
+tmp
+.nx/cache
+.nx/workspace-data
+
+# Version control
+.git
+.gitignore
+
+# Environment files (secrets must not be baked into images)
+.env
+.env.*
+!.env.example
+
+# IDE and editor files
+.vscode
+.idea
+*.swp
+*.swo
+*~
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Documentation
+docs
+*.md
+LICENSE
+
+# Test files and config
+coverage
+**/*.spec.ts
+**/*.test.ts
+**/__tests__
+.agentic-qe
+
+# CI/CD and infrastructure manifests
+.github
+k8s
+docker-compose*.yml
+
+# Misc
+scripts
+.claude
+.husky
+.eslintcache
+*.log

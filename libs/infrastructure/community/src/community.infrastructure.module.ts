@@ -6,8 +6,8 @@ import { PostgresGroupRepository } from './repositories/postgres-group.repositor
 import { PostgresMembershipRepository } from './repositories/postgres-membership.repository';
 import { DataSource } from 'typeorm';
 
-export const GROUP_REPOSITORY = Symbol('IGroupRepository');
-export const MEMBERSHIP_REPOSITORY = Symbol('IMembershipRepository');
+export const GROUP_REPOSITORY = 'IGroupRepository';
+export const MEMBERSHIP_REPOSITORY = 'IMembershipRepository';
 
 @Module({
   imports: [TypeOrmModule.forFeature([GroupEntity, MembershipEntity])],

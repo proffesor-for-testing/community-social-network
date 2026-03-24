@@ -1,0 +1,20 @@
+# =============================================================================
+# CSN Web Frontend - Kubernetes Service
+# =============================================================================
+apiVersion: v1
+kind: Service
+metadata:
+  name: csn-web
+  namespace: csn
+  labels:
+    app: csn-web
+    component: frontend
+spec:
+  type: ClusterIP
+  selector:
+    app: csn-web
+  ports:
+    - name: http
+      port: 80
+      targetPort: http
+      protocol: TCP

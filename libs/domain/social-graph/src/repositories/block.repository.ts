@@ -8,5 +8,7 @@ export interface IBlockRepository extends IRepository<Block, BlockId> {
     blockedId: UserId,
   ): Promise<Block | null>;
 
+  findByBlocker(blockerId: UserId): Promise<Block[]>;
+
   isBlocked(userId1: UserId, userId2: UserId): Promise<boolean>;
 }

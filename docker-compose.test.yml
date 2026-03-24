@@ -1,0 +1,80 @@
+# =============================================================================
+# CSN Test Environment - Docker Compose
+# =============================================================================
+# Usage: docker-compose -f docker-compose.yml -f docker-compose.test.yml up
+# =============================================================================
+# Overrides the base docker-compose.yml for ephemeral test environments.
+# No persistent volumes, separate test database, and test-specific settings.
+# =============================================================================
+
+services:
+  # ---------------------------------------------------------------------------
+  # API Service - Test configuration
+  # ---------------------------------------------------------------------------
+  api:
+    environment:
+      NODE_ENV: test
+      DB_DATABASE: csn_test
+      DB_HOST: postgres-test
+      REDIS_HOST: redis-test
+      JWT_SECRET: test-jwt-secret
+      JWT_REFRESH_SECRET: test-refresh-secret
+      LOG_LEVEL: warn
+    depends_on:
+      postgres-test:
+        condition: service_healthy
+      redis-test:
+        condition: service_healthy
+
+  # ---------------------------------------------------------------------------
+  # PostgreSQL Test Database (ephemeral, no volume)
+  # ---------------------------------------------------------------------------
+  postgres-test:
+    image: postgres:15-alpine
+    container_name: csn-postgres-test
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: csn_test
+      POSTGRES_INITDB_ARGS: "--encoding=UTF-8 --lc-collate=en_US.utf8 --lc-ctype=en_US.utf8"
+    # No volumes - ephemeral test data
+    tmpfs:
+      - /var/lib/postgresql/data
+    networks:
+      - csn-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d csn_test"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+      start_period: 5s
+
+  # ---------------------------------------------------------------------------
+  # Redis Test Instance (ephemeral, no volume)
+  # ---------------------------------------------------------------------------
+  redis-test:
+    image: redis:7-alpine
+    container_name: csn-redis-test
+    command: >
+      redis-server
+      --maxmemory 64mb
+      --maxmemory-policy allkeys-lru
+      --save ""
+    # No volumes - ephemeral test data
+    tmpfs:
+      - /data
+    networks:
+      - csn-network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+      start_period: 3s
+
+  # ---------------------------------------------------------------------------
+  # Disable the web service in test mode (not needed)
+  # ---------------------------------------------------------------------------
+  web:
+    profiles:
+      - web-test

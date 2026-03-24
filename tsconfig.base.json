@@ -41,7 +41,11 @@
       "@csn/infra-social-graph": ["libs/infrastructure/social-graph/src/index.ts"],
       "@csn/infra-community": ["libs/infrastructure/community/src/index.ts"],
       "@csn/infra-notification": ["libs/infrastructure/notification/src/index.ts"],
-      "@csn/infra-admin": ["libs/infrastructure/admin/src/index.ts"]
+      "@csn/infra-admin": ["libs/infrastructure/admin/src/index.ts"],
+      "@csn/infra-observability": ["libs/infrastructure/observability/src/index.ts"],
+      "@csn/infra-gdpr": ["libs/infrastructure/gdpr/src/index.ts"],
+      "@csn/infra-storage": ["libs/infrastructure/storage/src/index.ts"],
+      "@csn/infra-email": ["libs/infrastructure/email/src/index.ts"]
     }
   },
   "exclude": ["node_modules", "tmp"]

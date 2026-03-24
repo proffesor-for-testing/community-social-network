@@ -1,0 +1,251 @@
+# =============================================================================
+# CSN - Pull Request Checks
+# =============================================================================
+name: PR Checks
+
+on:
+  pull_request:
+    branches: [main]
+    types: [opened, synchronize, reopened]
+
+concurrency:
+  group: pr-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+env:
+  NODE_VERSION: "20"
+
+jobs:
+  # ---------------------------------------------------------------------------
+  # Type check, lint, and test in parallel
+  # ---------------------------------------------------------------------------
+  quality:
+    name: Quality Checks
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:15-alpine
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: csn_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    env:
+      NODE_ENV: test
+      DB_HOST: localhost
+      DB_PORT: 5432
+      DB_USERNAME: postgres
+      DB_PASSWORD: postgres
+      DB_DATABASE: csn_test
+      REDIS_HOST: localhost
+      REDIS_PORT: 6379
+      JWT_SECRET: pr-test-jwt-secret
+      JWT_REFRESH_SECRET: pr-test-refresh-secret
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Derive NX SHAs for affected
+        uses: nrwl/nx-set-shas@v4
+
+      - name: Type check
+        run: npx tsc --noEmit -p tsconfig.base.json
+
+      - name: Lint affected
+        run: npx nx affected --target=lint --parallel=3
+
+      - name: Test affected
+        run: npx nx affected --target=test --parallel=3 --run --coverage
+
+      - name: Upload coverage
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: pr-coverage
+          path: coverage/
+          retention-days: 5
+
+  # ---------------------------------------------------------------------------
+  # Domain purity check
+  # ---------------------------------------------------------------------------
+  domain-purity:
+    name: Domain Purity
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Check domain layer for framework imports
+        run: |
+          echo "Scanning domain layer for purity violations..."
+          FOUND=false
+
+          # Check for NestJS imports
+          NESTJS=$(grep -r "@nestjs" libs/domain/ --include="*.ts" -l 2>/dev/null || true)
+          if [ -n "$NESTJS" ]; then
+            echo "::error::NestJS imports found in domain layer:"
+            echo "$NESTJS" | while read -r file; do echo "  - $file"; done
+            FOUND=true
+          fi
+
+          # Check for TypeORM imports
+          TYPEORM=$(grep -r "typeorm" libs/domain/ --include="*.ts" -l 2>/dev/null || true)
+          if [ -n "$TYPEORM" ]; then
+            echo "::error::TypeORM imports found in domain layer:"
+            echo "$TYPEORM" | while read -r file; do echo "  - $file"; done
+            FOUND=true
+          fi
+
+          # Check for infrastructure imports
+          INFRA=$(grep -r "@csn/infra-" libs/domain/ --include="*.ts" -l 2>/dev/null || true)
+          if [ -n "$INFRA" ]; then
+            echo "::error::Infrastructure imports found in domain layer:"
+            echo "$INFRA" | while read -r file; do echo "  - $file"; done
+            FOUND=true
+          fi
+
+          if [ "$FOUND" = true ]; then
+            echo ""
+            echo "Domain purity violations detected. The domain layer must not depend on frameworks or infrastructure."
+            exit 1
+          fi
+
+          echo "Domain purity check passed."
+
+  # ---------------------------------------------------------------------------
+  # Build check
+  # ---------------------------------------------------------------------------
+  build-check:
+    name: Build Verification
+    runs-on: ubuntu-latest
+    needs: [quality]
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Derive NX SHAs for affected
+        uses: nrwl/nx-set-shas@v4
+
+      - name: Build affected
+        run: npx nx affected --target=build --parallel=3
+
+  # ---------------------------------------------------------------------------
+  # Coverage diff comment on PR
+  # ---------------------------------------------------------------------------
+  coverage-comment:
+    name: Coverage Report
+    runs-on: ubuntu-latest
+    needs: [quality]
+    if: always()
+    permissions:
+      pull-requests: write
+    steps:
+      - name: Download coverage artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: pr-coverage
+          path: coverage/
+        continue-on-error: true
+
+      - name: Post coverage summary as PR comment
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const path = require('path');
+
+            let coverageSummary = 'No coverage data available for this run.';
+
+            // Try to find and parse coverage summary
+            const summaryPath = path.join('coverage', 'coverage-summary.json');
+            if (fs.existsSync(summaryPath)) {
+              try {
+                const data = JSON.parse(fs.readFileSync(summaryPath, 'utf8'));
+                const total = data.total;
+                coverageSummary = [
+                  '| Metric | Coverage |',
+                  '|--------|----------|',
+                  `| Statements | ${total.statements.pct}% |`,
+                  `| Branches | ${total.branches.pct}% |`,
+                  `| Functions | ${total.functions.pct}% |`,
+                  `| Lines | ${total.lines.pct}% |`,
+                ].join('\n');
+              } catch (e) {
+                coverageSummary = 'Coverage data found but could not be parsed.';
+              }
+            }
+
+            const body = [
+              '## Test Coverage Report',
+              '',
+              coverageSummary,
+              '',
+              '*Generated by PR Checks workflow*',
+            ].join('\n');
+
+            // Find existing comment to update
+            const { data: comments } = await github.rest.issues.listComments({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+            });
+
+            const botComment = comments.find(
+              (c) => c.user.type === 'Bot' && c.body.includes('## Test Coverage Report')
+            );
+
+            if (botComment) {
+              await github.rest.issues.updateComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                comment_id: botComment.id,
+                body,
+              });
+            } else {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: context.issue.number,
+                body,
+              });
+            }
