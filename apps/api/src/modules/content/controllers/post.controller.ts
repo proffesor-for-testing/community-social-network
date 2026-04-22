@@ -37,7 +37,7 @@ export class PostController {
     private readonly queryBus: QueryBus,
   ) {}
 
-  @Post('api/posts')
+  @Post('api/publications')
   @HttpCode(HttpStatus.CREATED)
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Create a new post' })
@@ -56,48 +56,7 @@ export class PostController {
     return { id: result.publicationId };
   }
 
-  @Public()
-  @Get('api/posts/:id')
-  @ApiOperation({ summary: 'Get a post by ID' })
-  @ApiResponse({ status: 200, description: 'Post found', type: PostResponseDto })
-  @ApiResponse({ status: 404, description: 'Post not found' })
-  async getPost(
-    @Param('id', ParseUUIDPipe) id: string,
-  ): Promise<PostResponseDto> {
-    return this.queryBus.execute<GetPostQuery, PostResponseDto>(new GetPostQuery(id));
-  }
-
-  @Put('api/posts/:id')
-  @ApiBearerAuth()
-  @ApiOperation({ summary: 'Update a post (owner only)' })
-  @ApiResponse({ status: 200, description: 'Post updated' })
-  @ApiResponse({ status: 403, description: 'Forbidden - not the post owner' })
-  @ApiResponse({ status: 404, description: 'Post not found' })
-  async updatePost(
-    @CurrentUser() user: AccessTokenPayload,
-    @Param('id', ParseUUIDPipe) id: string,
-    @Body() dto: UpdatePostDto,
-  ): Promise<void> {
-    const command = new UpdatePostCommand(id, user.userId, dto.content);
-    await this.commandBus.execute(command);
-  }
-
-  @Delete('api/posts/:id')
-  @HttpCode(HttpStatus.NO_CONTENT)
-  @ApiBearerAuth()
-  @ApiOperation({ summary: 'Delete a post (owner only)' })
-  @ApiResponse({ status: 204, description: 'Post deleted' })
-  @ApiResponse({ status: 403, description: 'Forbidden - not the post owner' })
-  @ApiResponse({ status: 404, description: 'Post not found' })
-  async deletePost(
-    @CurrentUser() user: AccessTokenPayload,
-    @Param('id', ParseUUIDPipe) id: string,
-  ): Promise<void> {
-    const command = new DeletePostCommand(id, user.userId);
-    await this.commandBus.execute(command);
-  }
-
-  @Get('api/feed')
+  @Get('api/publications/feed')
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Get the authenticated user feed (cursor-based pagination)' })
   @ApiResponse({ status: 200, description: 'Feed retrieved' })
@@ -112,4 +71,46 @@ export class PostController {
     );
     return this.queryBus.execute<GetFeedQuery, FeedResult>(query);
   }
+
+  @Public()
+  @Get('api/publications/:id')
+  @ApiOperation({ summary: 'Get a post by ID' })
+  @ApiResponse({ status: 200, description: 'Post found', type: PostResponseDto })
+  @ApiResponse({ status: 404, description: 'Post not found' })
+  async getPost(
+    @Param('id', ParseUUIDPipe) id: string,
+  ): Promise<PostResponseDto> {
+    return this.queryBus.execute<GetPostQuery, PostResponseDto>(new GetPostQuery(id));
+  }
+
+  @Put('api/publications/:id')
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Update a post (owner only)' })
+  @ApiResponse({ status: 200, description: 'Post updated' })
+  @ApiResponse({ status: 403, description: 'Forbidden - not the post owner' })
+  @ApiResponse({ status: 404, description: 'Post not found' })
+  async updatePost(
+    @CurrentUser() user: AccessTokenPayload,
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() dto: UpdatePostDto,
+  ): Promise<void> {
+    const command = new UpdatePostCommand(id, user.userId, dto.content);
+    await this.commandBus.execute(command);
+  }
+
+  @Delete('api/publications/:id')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Delete a post (owner only)' })
+  @ApiResponse({ status: 204, description: 'Post deleted' })
+  @ApiResponse({ status: 403, description: 'Forbidden - not the post owner' })
+  @ApiResponse({ status: 404, description: 'Post not found' })
+  async deletePost(
+    @CurrentUser() user: AccessTokenPayload,
+    @Param('id', ParseUUIDPipe) id: string,
+  ): Promise<void> {
+    const command = new DeletePostCommand(id, user.userId);
+    await this.commandBus.execute(command);
+  }
+
 }

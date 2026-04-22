@@ -1,10 +1,16 @@
-import { Injectable, Inject, ConflictException, BadRequestException } from '@nestjs/common';
+import { Injectable, Inject, ConflictException, BadRequestException, Logger } from '@nestjs/common';
 import * as bcrypt from 'bcrypt';
 import { Member, MemberId, Credential, PlainPassword, IMemberRepository, SessionId, Session } from '@csn/domain-identity';
-import { Email, Timestamp, ValidationError, ConflictError } from '@csn/domain-shared';
+import { Email, Timestamp, UserId, ValidationError, ConflictError } from '@csn/domain-shared';
 import { MEMBER_REPOSITORY_TOKEN, SESSION_REPOSITORY_TOKEN } from '@csn/infra-identity';
 import { JwtTokenService, TokenPayload } from '@csn/infra-auth';
 import type { ISessionRepository } from '@csn/domain-identity';
+import {
+  Profile,
+  ProfileId,
+  DisplayName,
+  IProfileRepository,
+} from '@csn/domain-profile';
 import { RegisterMemberCommand } from './register-member.command';
 import { AuthResponseDto } from '../dto/auth-response.dto';
 import { MemberResponseDto } from '../dto/member-response.dto';
@@ -13,11 +19,15 @@ const BCRYPT_ROUNDS = 12;
 
 @Injectable()
 export class RegisterMemberHandler {
+  private readonly logger = new Logger(RegisterMemberHandler.name);
+
   constructor(
     @Inject(MEMBER_REPOSITORY_TOKEN)
     private readonly memberRepository: IMemberRepository,
     @Inject(SESSION_REPOSITORY_TOKEN)
     private readonly sessionRepository: ISessionRepository,
+    @Inject('IProfileRepository')
+    private readonly profileRepository: IProfileRepository,
     private readonly jwtTokenService: JwtTokenService,
   ) {}
 
@@ -60,6 +70,26 @@ export class RegisterMemberHandler {
     // Persist
     await this.memberRepository.save(member);
     await this.sessionRepository.save(session);
+
+    // Create the companion Profile aggregate. Normally this would be an
+    // event-driven cross-context concern, but the event dispatcher registry
+    // has no handlers registered, so do it synchronously here to guarantee
+    // every member has a profile.
+    try {
+      const profile = Profile.create(
+        ProfileId.generate(),
+        UserId.create(memberId.value),
+        DisplayName.create(command.displayName),
+        email,
+      );
+      await this.profileRepository.save(profile);
+    } catch (error) {
+      this.logger.error(
+        `Failed to create profile for new member ${memberId.value}: ${
+          error instanceof Error ? error.message : String(error)
+        }`,
+      );
+    }
 
     // Generate tokens
     const tokenPayload: TokenPayload = {

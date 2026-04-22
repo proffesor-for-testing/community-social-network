@@ -2,6 +2,7 @@ import {
   Controller,
   Get,
   Put,
+  Patch,
   Post,
   Param,
   Body,
@@ -35,6 +36,51 @@ export class ProfileController {
     private readonly updateProfileHandler: UpdateProfileHandler,
     private readonly uploadAvatarHandler: UploadAvatarHandler,
   ) {}
+
+  @Get('me')
+  async getMyProfile(
+    @CurrentUser() user: AccessTokenPayload,
+  ): Promise<ProfileResponseDto> {
+    return this.getProfileByMemberHandler.execute(
+      new GetProfileByMemberQuery(user.userId),
+    );
+  }
+
+  @Patch('me')
+  @HttpCode(HttpStatus.OK)
+  async updateMyProfile(
+    @Body() dto: UpdateProfileDto,
+    @CurrentUser() user: AccessTokenPayload,
+  ): Promise<ProfileResponseDto> {
+    const profile = await this.getProfileByMemberHandler.execute(
+      new GetProfileByMemberQuery(user.userId),
+    );
+    return this.updateProfileHandler.execute(
+      new UpdateProfileCommand(
+        profile.id,
+        user.userId,
+        dto.displayName,
+        dto.bio,
+        dto.city,
+        dto.country,
+      ),
+    );
+  }
+
+  @Post('me/avatar')
+  @HttpCode(HttpStatus.OK)
+  @UseInterceptors(FileInterceptor('avatar'))
+  async uploadMyAvatar(
+    @UploadedFile() file: Express.Multer.File,
+    @CurrentUser() user: AccessTokenPayload,
+  ): Promise<UploadAvatarResponseDto> {
+    const profile = await this.getProfileByMemberHandler.execute(
+      new GetProfileByMemberQuery(user.userId),
+    );
+    return this.uploadAvatarHandler.execute(
+      new UploadAvatarCommand(profile.id, user.userId, file),
+    );
+  }
 
   @Public()
   @Get(':id')

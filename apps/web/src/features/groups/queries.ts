@@ -34,8 +34,22 @@ export async function fetchGroup(groupId: string): Promise<GroupDto> {
   return data;
 }
 
+function toApiGroupPayload(dto: Partial<CreateGroupDto>) {
+  const { name, description, visibility } = dto;
+  const payload: Record<string, unknown> = {};
+  if (name !== undefined) payload.name = name;
+  if (description !== undefined) payload.description = description;
+  if (visibility !== undefined) {
+    payload.settings = {
+      isPublic: visibility === 'public',
+      requireApproval: visibility !== 'public',
+    };
+  }
+  return payload;
+}
+
 export async function createGroup(dto: CreateGroupDto): Promise<GroupDto> {
-  const { data } = await apiClient.post<GroupDto>('/groups', dto);
+  const { data } = await apiClient.post<GroupDto>('/groups', toApiGroupPayload(dto));
   return data;
 }
 
@@ -43,7 +57,7 @@ export async function updateGroup(
   groupId: string,
   dto: Partial<CreateGroupDto>,
 ): Promise<GroupDto> {
-  const { data } = await apiClient.patch<GroupDto>(`/groups/${groupId}`, dto);
+  const { data } = await apiClient.patch<GroupDto>(`/groups/${groupId}`, toApiGroupPayload(dto));
   return data;
 }
 

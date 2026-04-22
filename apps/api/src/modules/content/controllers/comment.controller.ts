@@ -26,7 +26,7 @@ export class CommentController {
     private readonly queryBus: QueryBus,
   ) {}
 
-  @Post('api/posts/:postId/comments')
+  @Post('api/publications/:postId/discussions')
   @HttpCode(HttpStatus.CREATED)
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Create a comment on a post' })
@@ -48,7 +48,7 @@ export class CommentController {
   }
 
   @Public()
-  @Get('api/posts/:postId/comments')
+  @Get('api/publications/:postId/discussions')
   @ApiOperation({ summary: 'Get all comments for a post (threaded)' })
   @ApiResponse({ status: 200, description: 'Comments retrieved', type: [CommentResponseDto] })
   @ApiResponse({ status: 404, description: 'Post not found' })

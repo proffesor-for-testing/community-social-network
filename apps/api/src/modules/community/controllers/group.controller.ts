@@ -3,6 +3,7 @@ import {
   Get,
   Post,
   Put,
+  Patch,
   Delete,
   Body,
   Param,
@@ -76,6 +77,52 @@ export class GroupController {
   }
 
   @Public()
+  @Get()
+  async listGroups(
+    @Query() dto: SearchGroupsDto,
+  ): Promise<{
+    items: GroupResponseDto[];
+    total: number;
+    page: number;
+    pageSize: number;
+    totalPages: number;
+  }> {
+    const query = new SearchGroupsQuery(
+      dto.query ?? '',
+      dto.page ?? 1,
+      dto.limit ?? 20,
+    );
+    const result = await this.searchGroupsHandler.execute(query);
+    return {
+      items: result.items.map(GroupResponseDto.fromDomain),
+      total: result.total,
+      page: result.page,
+      pageSize: result.pageSize,
+      totalPages: result.totalPages,
+    };
+  }
+
+  @Get('mine')
+  async myGroups(
+    @CurrentUser() user: AccessTokenPayload,
+  ): Promise<GroupResponseDto[]> {
+    const query = new SearchGroupsQuery('', 1, 200);
+    const result = await this.searchGroupsHandler.execute(query);
+    const memberOf = await Promise.all(
+      result.items.map(async (g) => {
+        const membersQuery = new GetGroupMembersQuery(g.id.value, 1, 500);
+        const members = await this.getGroupMembersHandler.execute(membersQuery);
+        return members.items.some((m) => m.memberId.value === user.userId)
+          ? g
+          : null;
+      }),
+    );
+    return memberOf
+      .filter((g): g is (typeof result.items)[number] => g !== null)
+      .map(GroupResponseDto.fromDomain);
+  }
+
+  @Public()
   @Get('search')
   async searchGroups(
     @Query() dto: SearchGroupsDto,
@@ -111,7 +158,7 @@ export class GroupController {
     return GroupResponseDto.fromDomain(group);
   }
 
-  @Put(':id')
+  @Patch(':id')
   async updateGroup(
     @CurrentUser() user: AccessTokenPayload,
     @Param('id', ParseUUIDPipe) id: string,
@@ -147,6 +194,25 @@ export class GroupController {
     const command = new JoinGroupCommand(user.userId, id);
     const membership = await this.joinGroupHandler.execute(command);
     return MembershipResponseDto.fromDomain(membership);
+  }
+
+  @Post(':id/members')
+  @HttpCode(HttpStatus.CREATED)
+  async joinGroupAlias(
+    @CurrentUser() user: AccessTokenPayload,
+    @Param('id', ParseUUIDPipe) id: string,
+  ): Promise<MembershipResponseDto> {
+    return this.joinGroup(user, id);
+  }
+
+  @Delete(':id/members/me')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  async leaveGroupAlias(
+    @CurrentUser() user: AccessTokenPayload,
+    @Param('id', ParseUUIDPipe) id: string,
+  ): Promise<void> {
+    const command = new LeaveGroupCommand(user.userId, id);
+    await this.leaveGroupHandler.execute(command);
   }
 
   @Post(':id/leave')

@@ -16,7 +16,7 @@ export class PreferenceEntity {
   @Column({
     name: 'channel_preferences',
     type: 'jsonb',
-    default: "'{}'" ,
+    default: '{}',
   })
   channelPreferences!: Record<string, string[]>;
 

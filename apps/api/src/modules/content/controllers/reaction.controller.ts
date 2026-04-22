@@ -21,7 +21,7 @@ import { RemoveReactionCommand } from '../commands/remove-reaction.command';
 export class ReactionController {
   constructor(private readonly commandBus: CommandBus) {}
 
-  @Post('api/posts/:postId/reactions')
+  @Post('api/publications/:postId/reactions')
   @HttpCode(HttpStatus.CREATED)
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Add a reaction to a post' })
@@ -36,7 +36,7 @@ export class ReactionController {
     await this.commandBus.execute(command);
   }
 
-  @Delete('api/posts/:postId/reactions')
+  @Delete('api/publications/:postId/reactions')
   @HttpCode(HttpStatus.NO_CONTENT)
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Remove a reaction from a post' })
@@ -51,7 +51,7 @@ export class ReactionController {
     await this.commandBus.execute(command);
   }
 
-  @Post('api/comments/:commentId/reactions')
+  @Post('api/discussions/:commentId/reactions')
   @HttpCode(HttpStatus.CREATED)
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Add a reaction to a comment' })

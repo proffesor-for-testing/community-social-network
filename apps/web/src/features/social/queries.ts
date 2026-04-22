@@ -22,16 +22,32 @@ export const socialKeys = {
 
 // ── API Functions ───────────────────────────────────────────────
 
+function normalizePaginated<T>(
+  data: PaginatedResponse<T> | { items: T[]; total?: number; cursor?: unknown } | T[],
+  page: number,
+  limit: number,
+): PaginatedResponse<T> {
+  if (Array.isArray(data)) {
+    return { items: data, total: data.length, page, pageSize: limit, totalPages: 1 };
+  }
+  return {
+    items: data.items ?? [],
+    total: (data as PaginatedResponse<T>).total ?? data.items?.length ?? 0,
+    page: (data as PaginatedResponse<T>).page ?? page,
+    pageSize: (data as PaginatedResponse<T>).pageSize ?? limit,
+    totalPages: (data as PaginatedResponse<T>).totalPages ?? 1,
+  };
+}
+
 export async function fetchFollowers(
   memberId: string,
   page = 1,
   limit = 20,
 ): Promise<PaginatedResponse<ProfileDto>> {
-  const { data } = await apiClient.get<PaginatedResponse<ProfileDto>>(
-    `/connections/${memberId}/followers`,
-    { params: { page, limit } },
-  );
-  return data;
+  const { data } = await apiClient.get<
+    PaginatedResponse<ProfileDto> | { items: ProfileDto[] } | ProfileDto[]
+  >(`/connections/${memberId}/followers`, { params: { page, limit } });
+  return normalizePaginated(data, page, limit);
 }
 
 export async function fetchFollowing(
@@ -39,21 +55,24 @@ export async function fetchFollowing(
   page = 1,
   limit = 20,
 ): Promise<PaginatedResponse<ProfileDto>> {
-  const { data } = await apiClient.get<PaginatedResponse<ProfileDto>>(
-    `/connections/${memberId}/following`,
-    { params: { page, limit } },
-  );
-  return data;
+  const { data } = await apiClient.get<
+    PaginatedResponse<ProfileDto> | { items: ProfileDto[] } | ProfileDto[]
+  >(`/connections/${memberId}/following`, { params: { page, limit } });
+  return normalizePaginated(data, page, limit);
 }
 
 export async function fetchBlocked(): Promise<ProfileDto[]> {
-  const { data } = await apiClient.get<ProfileDto[]>('/connections/blocked');
-  return data;
+  const { data } = await apiClient.get<
+    ProfileDto[] | { items: ProfileDto[] }
+  >('/connections/blocked');
+  return Array.isArray(data) ? data : data.items ?? [];
 }
 
 export async function fetchPendingRequests(): Promise<ConnectionDto[]> {
-  const { data } = await apiClient.get<ConnectionDto[]>('/connections/pending');
-  return data;
+  const { data } = await apiClient.get<
+    ConnectionDto[] | { items: ConnectionDto[] }
+  >('/connections/pending');
+  return Array.isArray(data) ? data : data.items ?? [];
 }
 
 export async function fetchConnectionStatus(

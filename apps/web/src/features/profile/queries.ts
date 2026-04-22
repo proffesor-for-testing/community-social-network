@@ -12,7 +12,7 @@ export const profileKeys = {
 // ── API Functions ───────────────────────────────────────────────
 
 export async function fetchProfile(memberId: string): Promise<ProfileDto> {
-  const { data } = await apiClient.get<ProfileDto>(`/profiles/${memberId}`);
+  const { data } = await apiClient.get<ProfileDto>(`/profiles/member/${memberId}`);
   return data;
 }
 

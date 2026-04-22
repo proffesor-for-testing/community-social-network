@@ -11,9 +11,15 @@ interface RegisterResponse extends AuthTokensDto {
 }
 
 async function registerRequest(dto: RegisterDto): Promise<RegisterResponse> {
+  // API accepts only email/displayName/password; strip other form fields.
+  const payload = {
+    email: dto.email,
+    displayName: dto.displayName,
+    password: dto.password,
+  };
   const { data } = await apiClient.post<RegisterResponse>(
     '/auth/register',
-    dto,
+    payload,
   );
   return data;
 }

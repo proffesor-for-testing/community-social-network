@@ -1,5 +1,6 @@
 import { Module } from '@nestjs/common';
 import { IdentityInfrastructureModule } from '@csn/infra-identity';
+import { ProfileInfrastructureModule } from '@csn/infra-profile';
 import { AuthModule } from '@csn/infra-auth';
 import { AuthController } from './controllers/auth.controller';
 import { RegisterMemberHandler } from './commands/register-member.handler';
@@ -11,6 +12,7 @@ import { GetCurrentMemberHandler } from './queries/get-current-member.handler';
 @Module({
   imports: [
     IdentityInfrastructureModule,
+    ProfileInfrastructureModule,
     AuthModule,
   ],
   controllers: [AuthController],

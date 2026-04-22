@@ -27,7 +27,7 @@ export class AlertEntity {
   @Column({ name: 'action_url', type: 'varchar', length: 2048, nullable: true })
   actionUrl!: string | null;
 
-  @Column({ type: 'varchar', length: 50, default: "'UNREAD'" })
+  @Column({ type: 'varchar', length: 50, default: 'UNREAD' })
   status!: string;
 
   @Column({ name: 'reference_id', type: 'varchar', length: 255, nullable: true })
