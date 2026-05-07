@@ -1,6 +1,6 @@
 # 📦 DevContainer Installation Report
 
-**Generated on:** Sat Nov 29 10:04:43 UTC 2025
+**Generated on:** Thu May  7 11:18:58 UTC 2026
 
 ## 📊 Installation Summary
 
@@ -20,7 +20,7 @@
 | UV | ✅ Success | Installed via official installer |
 | Claude Monitor | ✅ Success | Installed via UV tool |
 | Claude Flow | ✅ Success | Installed via npm (alpha) |
-| RUV Swarm | ✅ Already Installed | Version: @1.0.20 |
+| RUV Swarm | ✅ Success | Installed via npm |
 | CCUsage | ✅ Success | Installed via npm |
 
 ## ⚠️ Manual Installation Instructions
@@ -48,4 +48,4 @@ brew install tmux
 
 ---
 
-*Report generated at: Sat Nov 29 10:07:17 UTC 2025*
+*Report generated at: Thu May  7 11:24:21 UTC 2026*

@@ -36,9 +36,6 @@
   },
   "postCreateCommand": "bash .devcontainer/install-tools.sh",
   "shutdownAction": "none",
-  "mounts": [
-    "source=/var/run/docker.sock,target=/var/run/docker.sock,type=bind"
-  ],
   "capAdd": [
     "SYS_ADMIN",
     "SYS_PTRACE"

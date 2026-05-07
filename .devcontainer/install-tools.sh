@@ -317,31 +317,31 @@ else
     record_status "claude-monitor" "❌ Failed" "UV not available - install UV first"
 fi
 
-# Install claude-flow@latest
+# Install ruflo@latest
 echo "### 🌊 Claude Flow Installation" >> "$REPORT_FILE"
 if command_exists npm; then
-    # Check if claude-flow is already installed
-    if npm list -g claude-flow 2>/dev/null | grep -q "claude-flow@"; then
-        FLOW_VERSION=$(npm list -g claude-flow 2>/dev/null | grep "claude-flow@" | grep -oE '@[0-9a-z.-]+' || echo 'unknown')
-        record_status "claude-flow" "✅ Already Installed" "Version: $FLOW_VERSION"
-        echo "claude-flow is already installed"
+    # Check if ruflo is already installed
+    if npm list -g ruflo 2>/dev/null | grep -q "ruflo@"; then
+        FLOW_VERSION=$(npm list -g ruflo 2>/dev/null | grep "ruflo@" | grep -oE '@[0-9a-z.-]+' || echo 'unknown')
+        record_status "ruflo" "✅ Already Installed" "Version: $FLOW_VERSION"
+        echo "ruflo is already installed"
     else
-        echo "Installing claude-flow@latest via npm..."
-        if npm install -g claude-flow@latest 2>/dev/null; then
-            record_status "claude-flow" "✅ Success" "Installed via npm (alpha)"
+        echo "Installing ruflo@latest via npm..."
+        if npm install -g ruflo@latest 2>/dev/null; then
+            record_status "ruflo" "✅ Success" "Installed via npm (alpha)"
         elif command_exists sudo; then
-            echo "Retrying claude-flow installation with sudo..."
-            if sudo npm install -g claude-flow@latest 2>/dev/null; then
-                record_status "claude-flow" "✅ Success" "Installed via npm with sudo (alpha)"
+            echo "Retrying ruflo installation with sudo..."
+            if sudo npm install -g ruflo@latest 2>/dev/null; then
+                record_status "ruflo" "✅ Success" "Installed via npm with sudo (alpha)"
             else
-                record_status "claude-flow" "❌ Failed" "npm installation failed"
+                record_status "ruflo" "❌ Failed" "npm installation failed"
             fi
         else
-            record_status "claude-flow" "❌ Failed" "npm installation failed without sudo"
+            record_status "ruflo" "❌ Failed" "npm installation failed without sudo"
         fi
     fi
 else
-    record_status "claude-flow" "❌ Failed" "npm not available - install Node.js first"
+    record_status "ruflo" "❌ Failed" "npm not available - install Node.js first"
 fi
 
 # Install ruv-swarm
@@ -406,14 +406,14 @@ echo "| GitHub CLI | ${INSTALL_STATUS[gh]} | ${INSTALL_NOTES[gh]} |" >> "$REPORT
 echo "| Claude Code | ${INSTALL_STATUS[claude-code]} | ${INSTALL_NOTES[claude-code]} |" >> "$REPORT_FILE"
 echo "| UV | ${INSTALL_STATUS[uv]} | ${INSTALL_NOTES[uv]} |" >> "$REPORT_FILE"
 echo "| Claude Monitor | ${INSTALL_STATUS[claude-monitor]} | ${INSTALL_NOTES[claude-monitor]} |" >> "$REPORT_FILE"
-echo "| Claude Flow | ${INSTALL_STATUS[claude-flow]} | ${INSTALL_NOTES[claude-flow]} |" >> "$REPORT_FILE"
+echo "| Claude Flow | ${INSTALL_STATUS[ruflo]} | ${INSTALL_NOTES[ruflo]} |" >> "$REPORT_FILE"
 echo "| RUV Swarm | ${INSTALL_STATUS[ruv-swarm]} | ${INSTALL_NOTES[ruv-swarm]} |" >> "$REPORT_FILE"
 echo "| CCUsage | ${INSTALL_STATUS[ccusage]} | ${INSTALL_NOTES[ccusage]} |" >> "$REPORT_FILE"
 echo "" >> "$REPORT_FILE"
 
 # Add manual installation instructions for failed items
 FAILED_ITEMS=0
-for tool in tmux gh claude-code uv claude-monitor claude-flow ruv-swarm ccusage; do
+for tool in tmux gh claude-code uv claude-monitor ruflo ruv-swarm ccusage; do
     if [[ "${INSTALL_STATUS[$tool]}" == *"Failed"* ]]; then
         ((FAILED_ITEMS++))
     fi
@@ -547,22 +547,22 @@ if [ $FAILED_ITEMS -gt 0 ]; then
         echo "" >> "$REPORT_FILE"
     fi
     
-    if [[ "${INSTALL_STATUS[claude-flow]}" == *"Failed"* ]]; then
+    if [[ "${INSTALL_STATUS[ruflo]}" == *"Failed"* ]]; then
         echo "### 🌊 Installing Claude Flow manually" >> "$REPORT_FILE"
         echo "" >> "$REPORT_FILE"
         echo "Claude Flow requires Node.js and npm to be installed first." >> "$REPORT_FILE"
         echo "" >> "$REPORT_FILE"
         echo "**Install Claude Flow (alpha version):**" >> "$REPORT_FILE"
         echo '```bash' >> "$REPORT_FILE"
-        echo "npm install -g claude-flow@latest" >> "$REPORT_FILE"
+        echo "npm install -g ruflo@latest" >> "$REPORT_FILE"
         echo '```' >> "$REPORT_FILE"
         echo "" >> "$REPORT_FILE"
         echo "**If you get permission errors, try:**" >> "$REPORT_FILE"
         echo '```bash' >> "$REPORT_FILE"
-        echo "sudo npm install -g claude-flow@latest" >> "$REPORT_FILE"
+        echo "sudo npm install -g ruflo@latest" >> "$REPORT_FILE"
         echo '```' >> "$REPORT_FILE"
         echo "" >> "$REPORT_FILE"
-        echo "**For more information, visit:** https://github.com/ruvnet/claude-flow" >> "$REPORT_FILE"
+        echo "**For more information, visit:** https://github.com/ruvnet/ruflo" >> "$REPORT_FILE"
         echo "" >> "$REPORT_FILE"
     fi
     
