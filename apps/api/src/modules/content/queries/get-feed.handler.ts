@@ -1,8 +1,6 @@
 import { QueryHandler, IQueryHandler } from '@nestjs/cqrs';
 import { Inject } from '@nestjs/common';
-import { UserId } from '@csn/domain-shared';
 import {
-  PublicationId,
   IPublicationRepository,
 } from '@csn/domain-content';
 import { GetFeedQuery } from './get-feed.query';
@@ -24,12 +22,8 @@ export class GetFeedHandler implements IQueryHandler<GetFeedQuery, FeedResult> {
   ) {}
 
   async execute(query: GetFeedQuery): Promise<FeedResult> {
-    const userId = UserId.create(query.userId);
-
-    // For now, the feed returns the user's own posts ordered by creation date
-    // with cursor-based pagination. A full social feed (with followed users'
-    // posts) would require a FeedService or read-model, which is a Phase 5+ concern.
-    const allPosts = await this.publicationRepository.findByAuthorId(userId);
+    // Until follower-based feeds are wired up, return all PUBLIC + PUBLISHED posts.
+    const allPosts = await this.publicationRepository.findAllPublished();
 
     // Sort by createdAt descending (newest first) -- repository already returns DESC
     let filtered = allPosts;

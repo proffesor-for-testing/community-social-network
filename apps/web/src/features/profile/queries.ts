@@ -22,7 +22,16 @@ export async function fetchMyProfile(): Promise<ProfileDto> {
 }
 
 export async function updateProfile(dto: UpdateProfileDto): Promise<ProfileDto> {
-  const { data } = await apiClient.patch<ProfileDto>('/profiles/me', dto);
+  // API expects city/country separately and rejects unknown fields (website).
+  const payload: Record<string, string | undefined> = {};
+  if (dto.displayName !== undefined) payload.displayName = dto.displayName;
+  if (dto.bio !== undefined) payload.bio = dto.bio;
+  if (dto.location !== undefined) {
+    const [city, ...rest] = dto.location.split(',').map((s) => s.trim());
+    if (city) payload.city = city;
+    if (rest.length > 0 && rest.join(', ')) payload.country = rest.join(', ');
+  }
+  const { data } = await apiClient.patch<ProfileDto>('/profiles/me', payload);
   return data;
 }
 

@@ -4,6 +4,7 @@ import { useAuthStore } from '../../../stores/auth.store';
 import { useUiStore } from '../../../stores/ui.store';
 import { useNotificationStore } from '../../../stores/notification.store';
 import { useLogout } from '../../../features/auth/hooks/useLogout';
+import { useUnreadCount } from '../../../features/notifications/hooks/useUnreadCount';
 import { Avatar } from '../atoms/Avatar';
 import { Badge } from '../atoms/Badge';
 
@@ -13,6 +14,9 @@ export function Header() {
   const toggleMobileMenu = useUiStore((s) => s.toggleMobileMenu);
   const unreadCount = useNotificationStore((s) => s.unreadCount);
   const { mutate: logout } = useLogout();
+
+  // Drive the unread-count polling so the badge stays in sync with the API.
+  useUnreadCount();
 
   const [menuOpen, setMenuOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);

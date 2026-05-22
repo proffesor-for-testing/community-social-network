@@ -3,6 +3,8 @@ import { Avatar } from '../../../shared/components/atoms/Avatar';
 import { Badge } from '../../../shared/components/atoms/Badge';
 import { Spinner } from '../../../shared/components/atoms/Spinner';
 import { useProfile } from '../hooks/useProfile';
+import { useAuthStore } from '../../../stores/auth.store';
+import { FollowButton } from '../../social/components/FollowButton';
 
 interface ProfileHeaderProps {
   memberId?: string;
@@ -10,6 +12,8 @@ interface ProfileHeaderProps {
 
 export function ProfileHeader({ memberId }: ProfileHeaderProps) {
   const { data: profile, isLoading, isError } = useProfile(memberId);
+  const currentUserId = useAuthStore((s) => s.user?.id);
+  const isOtherUser = !!memberId && memberId !== currentUserId;
 
   if (isLoading) {
     return (
@@ -43,7 +47,7 @@ export function ProfileHeader({ memberId }: ProfileHeaderProps) {
             size="xl"
             className="ring-4 ring-white dark:ring-surface-dark-secondary"
           />
-          <div className="pb-1">
+          <div className="pb-1 flex-1">
             <h1 className="text-xl font-bold text-gray-900 dark:text-gray-100">
               {profile.displayName}
             </h1>
@@ -51,6 +55,7 @@ export function ProfileHeader({ memberId }: ProfileHeaderProps) {
               Joined {new Date(profile.joinedAt).toLocaleDateString()}
             </p>
           </div>
+          {isOtherUser && <FollowButton memberId={profile.memberId} />}
         </div>
 
         {profile.bio && (

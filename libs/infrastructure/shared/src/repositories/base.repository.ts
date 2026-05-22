@@ -46,20 +46,22 @@ export abstract class BaseRepository<
 
   async save(aggregate: TDomain): Promise<void> {
     const entity = this.mapper.toPersistence(aggregate);
-    const existsInDb =
-      (await this.ormRepository.count({ where: this.idCondition(aggregate.id) })) > 0;
+    const existing = await this.ormRepository.findOne({
+      where: this.idCondition(aggregate.id),
+      select: ['version'] as unknown as (keyof TEntity)[],
+    });
 
-    if (!existsInDb) {
+    if (!existing) {
       // Insert: no optimistic lock check needed for first-time persistence.
       // A handler may mutate an aggregate several times before saving, so
       // aggregate.version alone is not a reliable "is new" signal.
       await this.ormRepository.save(entity);
     } else {
       // Update: use version-conditioned UPDATE for atomic optimistic locking.
-      // The entity from toPersistence carries the NEW version. We match
-      // against the previous version in the DB so that a concurrent write
-      // (which would have already bumped the version) causes 0 affected rows.
-      const previousVersion = aggregate.version - 1;
+      // Use the loaded entity's version as the guard; a handler may bump
+      // the aggregate version multiple times in a single unit-of-work, so
+      // `aggregate.version - 1` is unreliable.
+      const previousVersion = (existing as unknown as { version: number }).version;
       const condition = this.idCondition(aggregate.id);
 
       const qb = this.ormRepository

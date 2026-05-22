@@ -28,14 +28,37 @@ function normalizePaginated<T>(
   limit: number,
 ): PaginatedResponse<T> {
   if (Array.isArray(data)) {
-    return { items: data, total: data.length, page, pageSize: limit, totalPages: 1 };
+    return { items: data, total: data.length, page, limit, totalPages: 1 };
   }
   return {
     items: data.items ?? [],
     total: (data as PaginatedResponse<T>).total ?? data.items?.length ?? 0,
     page: (data as PaginatedResponse<T>).page ?? page,
-    pageSize: (data as PaginatedResponse<T>).pageSize ?? limit,
+    limit: (data as PaginatedResponse<T>).limit ?? limit,
     totalPages: (data as PaginatedResponse<T>).totalPages ?? 1,
+  };
+}
+
+// The API returns connection records, not enriched profiles. Until an
+// author-name join exists in the API, synthesize a minimal ProfileDto from
+// the other side of the connection so FollowersList/FollowingList don't crash.
+function connectionToProfile(
+  c: ApiConnection,
+  perspectiveMemberId: string,
+): ProfileDto {
+  const isFollower = (c.followeeId ?? c.addresseeId) === perspectiveMemberId;
+  const otherId = isFollower
+    ? (c.followerId ?? c.requesterId ?? '')
+    : (c.followeeId ?? c.addresseeId ?? '');
+  return {
+    id: c.id,
+    memberId: otherId,
+    displayName: 'Member',
+    bio: null,
+    avatarUrl: null,
+    location: null,
+    website: null,
+    joinedAt: c.createdAt,
   };
 }
 
@@ -45,9 +68,15 @@ export async function fetchFollowers(
   limit = 20,
 ): Promise<PaginatedResponse<ProfileDto>> {
   const { data } = await apiClient.get<
-    PaginatedResponse<ProfileDto> | { items: ProfileDto[] } | ProfileDto[]
+    | PaginatedResponse<ApiConnection>
+    | { items: ApiConnection[] }
+    | ApiConnection[]
   >(`/connections/${memberId}/followers`, { params: { page, limit } });
-  return normalizePaginated(data, page, limit);
+  const items = Array.isArray(data) ? data : data.items ?? [];
+  const profiles = items.map((c) => connectionToProfile(c, memberId));
+  const total = Array.isArray(data) ? data.length : (data as PaginatedResponse<unknown>).total ?? profiles.length;
+  const totalPages = Array.isArray(data) ? 1 : (data as PaginatedResponse<unknown>).totalPages ?? 1;
+  return { items: profiles, total, page, limit, totalPages };
 }
 
 export async function fetchFollowing(
@@ -56,9 +85,15 @@ export async function fetchFollowing(
   limit = 20,
 ): Promise<PaginatedResponse<ProfileDto>> {
   const { data } = await apiClient.get<
-    PaginatedResponse<ProfileDto> | { items: ProfileDto[] } | ProfileDto[]
+    | PaginatedResponse<ApiConnection>
+    | { items: ApiConnection[] }
+    | ApiConnection[]
   >(`/connections/${memberId}/following`, { params: { page, limit } });
-  return normalizePaginated(data, page, limit);
+  const items = Array.isArray(data) ? data : data.items ?? [];
+  const profiles = items.map((c) => connectionToProfile(c, memberId));
+  const total = Array.isArray(data) ? data.length : (data as PaginatedResponse<unknown>).total ?? profiles.length;
+  const totalPages = Array.isArray(data) ? 1 : (data as PaginatedResponse<unknown>).totalPages ?? 1;
+  return { items: profiles, total, page, limit, totalPages };
 }
 
 export async function fetchBlocked(): Promise<ProfileDto[]> {
@@ -68,28 +103,70 @@ export async function fetchBlocked(): Promise<ProfileDto[]> {
   return Array.isArray(data) ? data : data.items ?? [];
 }
 
+// API returns connections with { id, followerId, followeeId, status, createdAt }.
+// Adapt to FE's ConnectionDto { id, requesterId, addresseeId, status, createdAt }.
+type ApiConnection = {
+  id: string;
+  followerId?: string;
+  followeeId?: string;
+  requesterId?: string;
+  addresseeId?: string;
+  status: string;
+  createdAt: string;
+};
+
+function adaptConnection(c: ApiConnection): ConnectionDto {
+  return {
+    id: c.id,
+    requesterId: c.requesterId ?? c.followerId ?? '',
+    addresseeId: c.addresseeId ?? c.followeeId ?? '',
+    status: (c.status ?? '').toLowerCase() as ConnectionDto['status'],
+    createdAt: c.createdAt,
+  };
+}
+
 export async function fetchPendingRequests(): Promise<ConnectionDto[]> {
   const { data } = await apiClient.get<
-    ConnectionDto[] | { items: ConnectionDto[] }
+    ApiConnection[] | { items: ApiConnection[] }
   >('/connections/pending');
-  return Array.isArray(data) ? data : data.items ?? [];
+  const items = Array.isArray(data) ? data : data.items ?? [];
+  return items.map(adaptConnection);
 }
 
 export async function fetchConnectionStatus(
   memberId: string,
 ): Promise<ConnectionDto | null> {
   try {
-    const { data } = await apiClient.get<ConnectionDto>(
+    const { data } = await apiClient.get<ApiConnection>(
       `/connections/status/${memberId}`,
     );
-    return data;
+    return adaptConnection(data);
   } catch {
+    // 404 from /status means no accepted connection. Fall back to checking
+    // pending requests so the FollowButton can reflect "Pending".
+    try {
+      const { data } = await apiClient.get<{ items: ApiConnection[] }>(
+        '/connections/pending',
+      );
+      const pending = (data.items ?? []).find(
+        (c) =>
+          (c.followeeId ?? c.addresseeId) === memberId ||
+          (c.followerId ?? c.requesterId) === memberId,
+      );
+      if (pending) {
+        return { ...adaptConnection(pending), status: 'pending' };
+      }
+    } catch {
+      // ignore
+    }
     return null;
   }
 }
 
 export async function sendFollowRequest(dto: SendConnectionRequestDto): Promise<ConnectionDto> {
-  const { data } = await apiClient.post<ConnectionDto>('/connections', dto);
+  const { data } = await apiClient.post<ConnectionDto>('/connections', {
+    memberId: dto.addresseeId,
+  });
   return data;
 }
 

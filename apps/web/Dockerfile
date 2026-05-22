@@ -7,7 +7,7 @@ WORKDIR /app
 
 # Copy package files for dependency installation
 COPY package.json package-lock.json ./
-RUN npm ci --ignore-scripts
+RUN npm install --ignore-scripts --legacy-peer-deps
 
 # Copy NX and TypeScript configuration
 COPY nx.json tsconfig.base.json ./

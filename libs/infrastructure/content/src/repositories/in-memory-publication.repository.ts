@@ -79,6 +79,24 @@ export class InMemoryPublicationRepository implements IPublicationRepository {
     return results;
   }
 
+  async findAllPublished(): Promise<Publication[]> {
+    const results: Publication[] = [];
+    for (const [pubId, entity] of this.store.entries()) {
+      if (entity.status === 'PUBLISHED' && entity.visibility === 'PUBLIC') {
+        results.push(
+          this.mapper.toDomain({
+            publication: entity,
+            mentions: this.mentionStore.get(pubId) ?? [],
+            reactions: this.reactionStore.get(pubId) ?? [],
+          }),
+        );
+      }
+    }
+    return results.sort(
+      (a, b) => b.createdAt.value.getTime() - a.createdAt.value.getTime(),
+    );
+  }
+
   /** Test helper: clear all data */
   clear(): void {
     this.store.clear();

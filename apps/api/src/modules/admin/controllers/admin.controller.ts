@@ -43,7 +43,7 @@ interface AdminUserPayload {
 @ApiTags('admin')
 @ApiBearerAuth()
 @UseGuards(AdminAuthGuard)
-@Controller('admin')
+@Controller('api/admin')
 export class AdminController {
   constructor(
     private readonly suspendUserHandler: SuspendUserHandler,

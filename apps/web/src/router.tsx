@@ -54,7 +54,24 @@ const routes: RouteObject[] = [
     children: [
       {
         element: <AppLayout />,
-        errorElement: <ErrorBoundary><></></ErrorBoundary>,
+        errorElement: (
+          <div className="p-6">
+            <div className="rounded-lg bg-red-50 p-6 text-center dark:bg-red-900/20">
+              <h2 className="text-lg font-semibold text-red-700 dark:text-red-300">
+                Something went wrong
+              </h2>
+              <p className="mt-2 text-sm text-red-600 dark:text-red-400">
+                The page failed to render. Try navigating back, or reload to recover.
+              </p>
+              <a
+                href="/"
+                className="mt-3 inline-block text-sm text-brand-600 hover:underline dark:text-brand-400"
+              >
+                Go back to feed
+              </a>
+            </div>
+          </div>
+        ),
         children: [
           // Feed routes (index + post detail)
           ...feedRoutes,

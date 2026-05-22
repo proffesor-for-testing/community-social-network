@@ -112,4 +112,23 @@ export class PostgresPublicationRepository
       }),
     );
   }
+
+  async findAllPublished(): Promise<Publication[]> {
+    const entities = await this.ormRepository.find({
+      where: {
+        status: 'PUBLISHED',
+        visibility: 'PUBLIC',
+      } as FindOptionsWhere<PublicationEntity>,
+      relations: ['mentions', 'reactions'],
+      order: { createdAt: 'DESC' },
+    });
+
+    return entities.map((entity) =>
+      this.publicationMapper.toDomain({
+        publication: entity,
+        mentions: entity.mentions ?? [],
+        reactions: entity.reactions ?? [],
+      }),
+    );
+  }
 }

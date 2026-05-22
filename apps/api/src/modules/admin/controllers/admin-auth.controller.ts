@@ -8,19 +8,21 @@ import {
 } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse } from '@nestjs/swagger';
 import { Request } from 'express';
+import { Public } from '@csn/infra-auth';
 import { AdminLoginDto } from '../dto/admin-login.dto';
 import { Verify2faDto } from '../dto/verify-2fa.dto';
 import { AdminLoginHandler } from '../commands/admin-login.handler';
 import { Verify2faHandler } from '../commands/verify-2fa.handler';
 
 @ApiTags('admin')
-@Controller('admin/auth')
+@Controller('api/admin/auth')
 export class AdminAuthController {
   constructor(
     private readonly adminLoginHandler: AdminLoginHandler,
     private readonly verify2faHandler: Verify2faHandler,
   ) {}
 
+  @Public()
   @Post('login')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Admin login' })

@@ -5,4 +5,5 @@ import { PublicationId } from '../value-objects/publication-id';
 export interface IPublicationRepository
   extends IRepository<Publication, PublicationId> {
   findByAuthorId(authorId: UserId): Promise<Publication[]>;
+  findAllPublished(): Promise<Publication[]>;
 }

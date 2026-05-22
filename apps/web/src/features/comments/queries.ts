@@ -11,19 +11,49 @@ export const commentKeys = {
 
 // ── API Functions ───────────────────────────────────────────────
 
+// API returns { id, postId, authorId, content, parentId, depth, status, createdAt }.
+// Map to FE's richer DiscussionDto shape.
+type ApiCommentResponse = {
+  id: string;
+  postId?: string;
+  publicationId?: string;
+  authorId: string;
+  content: string;
+  parentId: string | null;
+  depth?: number;
+  status?: string;
+  createdAt: string;
+  updatedAt?: string;
+};
+
+function adaptComment(c: ApiCommentResponse): DiscussionDto {
+  return {
+    id: c.id,
+    publicationId: c.publicationId ?? c.postId ?? '',
+    authorId: c.authorId,
+    authorName: 'Member',
+    authorAvatarUrl: null,
+    body: c.content,
+    parentId: c.parentId,
+    reactionCount: 0,
+    createdAt: c.createdAt,
+    updatedAt: c.updatedAt ?? c.createdAt,
+  };
+}
+
 export async function fetchComments(publicationId: string): Promise<DiscussionDto[]> {
-  const { data } = await apiClient.get<DiscussionDto[]>(
+  const { data } = await apiClient.get<ApiCommentResponse[]>(
     `/publications/${publicationId}/discussions`,
   );
-  return data;
+  return data.map(adaptComment);
 }
 
 export async function createComment(dto: CreateDiscussionDto): Promise<DiscussionDto> {
-  const { data } = await apiClient.post<DiscussionDto>(
+  const { data } = await apiClient.post<ApiCommentResponse>(
     `/publications/${dto.publicationId}/discussions`,
     { content: dto.body, parentCommentId: dto.parentId },
   );
-  return data;
+  return adaptComment({ ...data, publicationId: dto.publicationId });
 }
 
 const COMMENT_REACTION_TYPE: Record<string, string> = {
