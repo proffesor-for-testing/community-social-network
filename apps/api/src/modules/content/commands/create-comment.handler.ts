@@ -9,7 +9,9 @@ import {
   IPublicationRepository,
   IDiscussionRepository,
 } from '@csn/domain-content';
+import { AlertType } from '@csn/domain-notification';
 import { CreateCommentCommand } from './create-comment.command';
+import { AlertCreatorService } from '../../notification/services/alert-creator.service';
 
 export class CreateCommentResult {
   constructor(public readonly commentId: string) {}
@@ -22,6 +24,7 @@ export class CreateCommentHandler implements ICommandHandler<CreateCommentComman
     private readonly publicationRepository: IPublicationRepository,
     @Inject('IDiscussionRepository')
     private readonly discussionRepository: IDiscussionRepository,
+    private readonly alerts: AlertCreatorService,
   ) {}
 
   async execute(command: CreateCommentCommand): Promise<CreateCommentResult> {
@@ -48,6 +51,16 @@ export class CreateCommentHandler implements ICommandHandler<CreateCommentComman
     const discussion = Discussion.create(id, postId, authorId, content, parentId);
 
     await this.discussionRepository.save(discussion);
+
+    // Notify the post author that someone commented (self-notify guarded inside).
+    await this.alerts.create({
+      recipientId: publication.authorId.value,
+      actorId: command.authorId,
+      type: AlertType.COMMENT,
+      verb: 'commented on your post',
+      actionUrl: `/posts/${command.postId}`,
+      sourceId: discussion.id.value,
+    });
 
     return new CreateCommentResult(discussion.id.value);
   }

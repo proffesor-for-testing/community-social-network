@@ -1,4 +1,5 @@
 import React from 'react';
+import { useNavigate } from 'react-router-dom';
 import type { AlertDto } from '../../../api/types';
 
 interface NotificationItemProps {
@@ -47,9 +48,13 @@ function TypeIcon({ type }: { type: string }) {
 }
 
 export function NotificationItem({ notification, onMarkRead }: NotificationItemProps) {
+  const navigate = useNavigate();
   const handleClick = () => {
     if (!notification.isRead) {
       onMarkRead(notification.id);
+    }
+    if (notification.actionUrl) {
+      navigate(notification.actionUrl);
     }
   };
 

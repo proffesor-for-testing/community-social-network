@@ -13,6 +13,9 @@ import {
   ParseUUIDPipe,
 } from '@nestjs/common';
 import { Public, CurrentUser, AccessTokenPayload } from '@csn/infra-auth';
+import { Inject } from '@nestjs/common';
+import { UserId } from '@csn/domain-shared';
+import { IProfileRepository } from '@csn/domain-profile';
 
 import { CreateGroupDto } from '../dto/create-group.dto';
 import { UpdateGroupDto } from '../dto/update-group.dto';
@@ -58,6 +61,8 @@ export class GroupController {
     private readonly getGroupHandler: GetGroupHandler,
     private readonly getGroupMembersHandler: GetGroupMembersHandler,
     private readonly searchGroupsHandler: SearchGroupsHandler,
+    @Inject('IProfileRepository')
+    private readonly profileRepository: IProfileRepository,
   ) {}
 
   @Post()
@@ -244,8 +249,22 @@ export class GroupController {
       limit ? parseInt(limit, 10) : 20,
     );
     const result = await this.getGroupMembersHandler.execute(query);
+    // Batch profile lookup so the group-members list renders real display names.
+    const memberIds = Array.from(
+      new Set(result.items.map((m) => m.memberId.value)),
+    ).map((id) => UserId.create(id));
+    const profilesByMember =
+      memberIds.length > 0
+        ? await this.profileRepository.findByMemberIds(memberIds)
+        : new Map();
     return {
-      items: result.items.map(MembershipResponseDto.fromDomain),
+      items: result.items.map((m) => {
+        const profile = profilesByMember.get(m.memberId.value);
+        const author = profile
+          ? { displayName: profile.displayName.value, avatarUrl: null }
+          : undefined;
+        return MembershipResponseDto.fromDomain(m, author);
+      }),
       total: result.total,
       page: result.page,
       pageSize: result.pageSize,

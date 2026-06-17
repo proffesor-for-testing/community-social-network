@@ -8,6 +8,12 @@ export class PostResponseDto {
   @ApiProperty({ description: 'Author member ID (UUID)', example: 'b2c3d4e5-f6a7-8901-bcde-f12345678901' })
   authorId!: string;
 
+  @ApiProperty({ description: 'Author display name (joined from Profile)', example: 'Jane Doe' })
+  authorName!: string;
+
+  @ApiPropertyOptional({ description: 'Author avatar URL', example: 'https://cdn.example.com/avatars/abc.jpg' })
+  authorAvatarUrl?: string | null;
+
   @ApiProperty({ description: 'Post content text', example: 'Hello world!' })
   content!: string;
 
@@ -32,10 +38,16 @@ export class PostResponseDto {
   @ApiProperty({ description: 'Post last update timestamp', example: '2024-01-01T00:00:00.000Z' })
   updatedAt!: string;
 
-  public static fromDomain(publication: Publication, commentCount?: number): PostResponseDto {
+  public static fromDomain(
+    publication: Publication,
+    commentCount?: number,
+    author?: { displayName?: string; avatarUrl?: string | null },
+  ): PostResponseDto {
     const dto = new PostResponseDto();
     dto.id = publication.id.value;
     dto.authorId = publication.authorId.value;
+    dto.authorName = author?.displayName ?? 'Member';
+    dto.authorAvatarUrl = author?.avatarUrl ?? null;
     dto.content = publication.content.text;
     dto.visibility = publication.visibility.value;
     dto.status = publication.status.value;

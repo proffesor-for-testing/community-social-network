@@ -18,6 +18,8 @@ type ApiCommentResponse = {
   postId?: string;
   publicationId?: string;
   authorId: string;
+  authorName?: string;
+  authorAvatarUrl?: string | null;
   content: string;
   parentId: string | null;
   depth?: number;
@@ -26,13 +28,13 @@ type ApiCommentResponse = {
   updatedAt?: string;
 };
 
-function adaptComment(c: ApiCommentResponse): DiscussionDto {
+export function adaptComment(c: ApiCommentResponse): DiscussionDto {
   return {
     id: c.id,
     publicationId: c.publicationId ?? c.postId ?? '',
     authorId: c.authorId,
-    authorName: 'Member',
-    authorAvatarUrl: null,
+    authorName: c.authorName?.trim() ? c.authorName : 'Member',
+    authorAvatarUrl: c.authorAvatarUrl ?? null,
     body: c.content,
     parentId: c.parentId,
     reactionCount: 0,
@@ -72,6 +74,17 @@ export async function addCommentReaction(
   await apiClient.post(`/discussions/${commentId}/reactions`, {
     reactionType: COMMENT_REACTION_TYPE[type] ?? type.toUpperCase(),
   });
+}
+
+export async function deleteComment(commentId: string): Promise<void> {
+  await apiClient.delete(`/discussions/${commentId}`);
+}
+
+export async function updateComment(
+  commentId: string,
+  content: string,
+): Promise<void> {
+  await apiClient.patch(`/discussions/${commentId}`, { content });
 }
 
 export async function removeCommentReaction(

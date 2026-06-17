@@ -1,5 +1,6 @@
 import { Module } from '@nestjs/common';
 import { NotificationInfrastructureModule } from '@csn/infra-notification';
+import { ProfileInfrastructureModule } from '@csn/infra-profile';
 import { NotificationController } from './controllers/notification.controller';
 
 // Command handlers
@@ -13,8 +14,11 @@ import { GetNotificationsHandler } from './queries/get-notifications.handler';
 import { GetUnreadCountHandler } from './queries/get-unread-count.handler';
 import { GetPreferencesHandler } from './queries/get-preferences.handler';
 
+// Services
+import { AlertCreatorService } from './services/alert-creator.service';
+
 @Module({
-  imports: [NotificationInfrastructureModule],
+  imports: [NotificationInfrastructureModule, ProfileInfrastructureModule],
   controllers: [NotificationController],
   providers: [
     // Commands
@@ -26,7 +30,9 @@ import { GetPreferencesHandler } from './queries/get-preferences.handler';
     GetNotificationsHandler,
     GetUnreadCountHandler,
     GetPreferencesHandler,
+    // Services
+    AlertCreatorService,
   ],
-  exports: [CreateAlertHandler],
+  exports: [CreateAlertHandler, AlertCreatorService],
 })
 export class NotificationModule {}

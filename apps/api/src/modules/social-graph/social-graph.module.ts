@@ -1,5 +1,7 @@
 import { Module } from '@nestjs/common';
 import { SocialGraphInfrastructureModule } from '@csn/infra-social-graph';
+import { ProfileInfrastructureModule } from '@csn/infra-profile';
+import { NotificationModule } from '../notification/notification.module';
 
 // Controllers
 import { ConnectionController } from './controllers/connection.controller';
@@ -20,7 +22,11 @@ import { GetPendingRequestsHandler } from './queries/get-pending-requests.handle
 import { GetBlocksHandler } from './queries/get-blocks.handler';
 
 @Module({
-  imports: [SocialGraphInfrastructureModule],
+  imports: [
+    SocialGraphInfrastructureModule,
+    ProfileInfrastructureModule,
+    NotificationModule,
+  ],
   controllers: [ConnectionController, BlockController],
   providers: [
     // Command handlers

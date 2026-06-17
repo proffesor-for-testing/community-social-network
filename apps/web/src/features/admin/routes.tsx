@@ -1,10 +1,19 @@
 import React, { lazy, Suspense } from 'react';
 import type { RouteObject } from 'react-router-dom';
 import { Spinner } from '../../shared/components/atoms/Spinner';
+import { AdminLoginForm } from './components/AdminLoginForm';
 
 const DashboardLazy = lazy(() =>
   import('./components/Dashboard').then((m) => ({ default: m.Dashboard })),
 );
+
+/** Public admin sign-in route (lives under AuthLayout, not ProtectedRoute). */
+export const adminPublicRoutes: RouteObject[] = [
+  {
+    path: 'admin/login',
+    element: <AdminLoginForm />,
+  },
+];
 const AuditLogLazy = lazy(() =>
   import('./components/AuditLog').then((m) => ({ default: m.AuditLog })),
 );

@@ -51,10 +51,14 @@ export function MemberList({ groupId }: MemberListProps) {
           className="flex items-center justify-between rounded-lg border border-gray-100 p-3 dark:border-gray-700"
         >
           <div className="flex items-center gap-3">
-            <Avatar alt={membership.memberId} size="md" />
+            <Avatar
+              src={membership.memberAvatarUrl ?? null}
+              alt={membership.memberName ?? 'Member'}
+              size="md"
+            />
             <div>
               <p className="text-sm font-semibold text-gray-900 dark:text-gray-100">
-                {membership.memberId}
+                {membership.memberName?.trim() ? membership.memberName : 'Member'}
               </p>
               <p className="text-xs text-gray-500 dark:text-gray-400">
                 Joined {new Date(membership.joinedAt).toLocaleDateString()}

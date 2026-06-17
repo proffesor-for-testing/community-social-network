@@ -5,6 +5,7 @@ import {
   Get,
   HttpCode,
   HttpStatus,
+  Inject,
   NotFoundException,
   Param,
   Patch,
@@ -12,6 +13,10 @@ import {
 } from '@nestjs/common';
 import { IsString, IsNotEmpty } from 'class-validator';
 import { CurrentUser } from '@csn/infra-auth';
+import { UserId } from '@csn/domain-shared';
+import { IConnectionRepository } from '@csn/domain-social-graph';
+import { enrichConnections } from '../queries/enrich-connections';
+import { IProfileRepository } from '@csn/domain-profile';
 import { FollowMemberCommand } from '../commands/follow-member.command';
 import { FollowMemberHandler } from '../commands/follow-member.handler';
 import { UnfollowMemberCommand } from '../commands/unfollow-member.command';
@@ -54,6 +59,10 @@ export class ConnectionController {
     private readonly getFollowersHandler: GetFollowersHandler,
     private readonly getFollowingHandler: GetFollowingHandler,
     private readonly getPendingRequestsHandler: GetPendingRequestsHandler,
+    @Inject('IConnectionRepository')
+    private readonly connectionRepository: IConnectionRepository,
+    @Inject('IProfileRepository')
+    private readonly profileRepository: IProfileRepository,
   ) {}
 
   // ── Query endpoints (most specific first) ──────────────────────
@@ -78,14 +87,20 @@ export class ConnectionController {
     @Param('memberId') memberId: string,
     @CurrentUser('userId') currentUserId: string,
   ): Promise<ConnectionResponseDto> {
-    const following = await this.getFollowingHandler.execute(
-      new GetFollowingQuery(currentUserId),
-    );
-    const match = following.items.find((c) => c.followeeId === memberId);
+    // Look up a direct connection in either direction so the FollowButton
+    // can render "Following" / "Pending" / "Follow" without a second round-trip.
+    const me = UserId.create(currentUserId);
+    const them = UserId.create(memberId);
+    const outgoing = await this.connectionRepository.findByFollowerAndFollowee(me, them);
+    const incoming = outgoing
+      ? null
+      : await this.connectionRepository.findByFollowerAndFollowee(them, me);
+    const match = outgoing ?? incoming;
     if (!match) {
       throw new NotFoundException('No connection with this member');
     }
-    return match;
+    const [enriched] = await enrichConnections([match], this.profileRepository);
+    return enriched!;
   }
 
   @Get(':memberId/followers')

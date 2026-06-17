@@ -74,10 +74,14 @@ export function PendingRequests() {
           className="flex items-center justify-between rounded-lg border border-gray-100 p-3 dark:border-gray-700"
         >
           <div className="flex items-center gap-3">
-            <Avatar alt={connection.requesterId} size="md" />
+            <Avatar
+              src={connection.requesterAvatarUrl ?? null}
+              alt={connection.requesterName ?? 'Member'}
+              size="md"
+            />
             <div>
               <p className="text-sm font-semibold text-gray-900 dark:text-gray-100">
-                {connection.requesterId}
+                {connection.requesterName?.trim() ? connection.requesterName : 'Member'}
               </p>
               <p className="text-xs text-gray-500 dark:text-gray-400">
                 Sent {new Date(connection.createdAt).toLocaleDateString()}

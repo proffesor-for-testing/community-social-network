@@ -4,7 +4,6 @@ import {
   UnauthorizedException,
   ForbiddenException,
 } from '@nestjs/common';
-import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcrypt';
 import { Email, UserId } from '@csn/domain-shared';
 import { IMemberRepository } from '@csn/domain-identity';
@@ -13,11 +12,12 @@ import {
   AuditEntryId,
   IpAddress,
   IAuditEntryRepository,
-  AdminRole,
 } from '@csn/domain-admin';
 import { MEMBER_REPOSITORY_TOKEN } from '@csn/infra-identity';
 import { AUDIT_ENTRY_REPOSITORY } from '@csn/infra-admin';
+import { JwtTokenService } from '@csn/infra-auth';
 import { AdminLoginCommand } from './admin-login.command';
+import { rolesFor, isAdminEmail } from '../../identity/utils/admin-roles';
 
 export interface AdminLoginResult {
   accessToken: string;
@@ -32,7 +32,7 @@ export class AdminLoginHandler {
     private readonly memberRepository: IMemberRepository,
     @Inject(AUDIT_ENTRY_REPOSITORY)
     private readonly auditEntryRepository: IAuditEntryRepository,
-    private readonly jwtService: JwtService,
+    private readonly jwtTokenService: JwtTokenService,
   ) {}
 
   async execute(command: AdminLoginCommand): Promise<AdminLoginResult> {
@@ -87,15 +87,19 @@ export class AdminLoginHandler {
       command.ipAddress,
     );
 
-    // Issue a short-lived admin JWT
-    const payload = {
-      sub: member.id.value,
+    // Reject anyone whose email isn't on the admin allowlist — the admin-login
+    // endpoint must not grant elevated privileges to non-admins, even with
+    // valid credentials.
+    if (!isAdminEmail(member.email.value)) {
+      throw new UnauthorizedException('Not an admin account');
+    }
+    // Mint a canonical access token via the shared JwtTokenService so the
+    // global JwtAuthGuard accepts it (issuer / audience / jti / blacklist).
+    const accessToken = await this.jwtTokenService.generateAccessToken({
+      userId: member.id.value,
       email: member.email.value,
-      role: AdminRole.ADMIN,
-      type: 'admin',
-    };
-
-    const accessToken = this.jwtService.sign(payload, { expiresIn: '15m' });
+      roles: rolesFor(member.email.value),
+    });
 
     return {
       accessToken,

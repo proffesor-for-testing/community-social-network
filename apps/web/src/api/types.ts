@@ -125,7 +125,13 @@ export interface CreateDiscussionDto {
 export interface ConnectionDto {
   id: string;
   requesterId: string;
+  /** Display name of the requester (the follower side). May be absent on
+   *  endpoints that don't join Profile data. */
+  requesterName?: string;
+  requesterAvatarUrl?: string | null;
   addresseeId: string;
+  addresseeName?: string;
+  addresseeAvatarUrl?: string | null;
   status: 'pending' | 'accepted' | 'declined';
   createdAt: string;
 }
@@ -157,6 +163,8 @@ export interface MembershipDto {
   id: string;
   groupId: string;
   memberId: string;
+  memberName?: string;
+  memberAvatarUrl?: string | null;
   role: 'member' | 'moderator' | 'admin';
   joinedAt: string;
 }
@@ -169,6 +177,9 @@ export interface AlertDto {
   type: string;
   title: string;
   body: string;
+  /** Optional deep-link the notification points to. Renderer uses this to
+   *  navigate when the user clicks the item. */
+  actionUrl?: string | null;
   isRead: boolean;
   metadata: Record<string, unknown>;
   createdAt: string;

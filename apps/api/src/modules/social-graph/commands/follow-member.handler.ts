@@ -5,8 +5,10 @@ import {
   IConnectionRepository,
   IBlockRepository,
 } from '@csn/domain-social-graph';
+import { AlertType } from '@csn/domain-notification';
 import { FollowMemberCommand } from './follow-member.command';
 import { ConnectionResponseDto } from '../dto/connection-response.dto';
+import { AlertCreatorService } from '../../notification/services/alert-creator.service';
 
 @Injectable()
 export class FollowMemberHandler {
@@ -15,6 +17,7 @@ export class FollowMemberHandler {
     private readonly connectionRepo: IConnectionRepository,
     @Inject('IBlockRepository')
     private readonly blockRepo: IBlockRepository,
+    private readonly alerts: AlertCreatorService,
   ) {}
 
   async execute(command: FollowMemberCommand): Promise<ConnectionResponseDto> {
@@ -46,6 +49,16 @@ export class FollowMemberHandler {
     const connection = Connection.request(connectionId, followerUserId, followeeUserId);
 
     await this.connectionRepo.save(connection);
+
+    // Best-effort: alert the followee that someone wants to follow them.
+    await this.alerts.create({
+      recipientId: followeeId,
+      actorId: followerId,
+      type: AlertType.FOLLOW,
+      verb: 'sent you a follow request',
+      actionUrl: '/connections',
+      sourceId: connection.id.value,
+    });
 
     return ConnectionResponseDto.fromDomain(connection);
   }

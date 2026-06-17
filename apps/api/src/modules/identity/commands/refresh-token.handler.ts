@@ -6,6 +6,7 @@ import { JwtTokenService, TokenPayload } from '@csn/infra-auth';
 import { RefreshTokenCommand } from './refresh-token.command';
 import { AuthResponseDto } from '../dto/auth-response.dto';
 import { MemberResponseDto } from '../dto/member-response.dto';
+import { rolesFor } from '../utils/admin-roles';
 
 @Injectable()
 export class RefreshTokenHandler {
@@ -54,7 +55,7 @@ export class RefreshTokenHandler {
     const tokenPayload: TokenPayload = {
       userId: member.id.value,
       email: member.email.value,
-      roles: ['member'],
+      roles: rolesFor(member.email.value),
     };
     const tokenPair = await this.jwtTokenService.generateTokenPair(tokenPayload, newSessionId.value);
 

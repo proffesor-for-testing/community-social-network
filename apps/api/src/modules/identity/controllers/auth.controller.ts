@@ -5,7 +5,11 @@ import {
   Body,
   HttpCode,
   HttpStatus,
+  Req,
+  Res,
+  UnauthorizedException,
 } from '@nestjs/common';
+import type { Request, Response } from 'express';
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
 import { Public, CurrentUser, AccessTokenPayload } from '@csn/infra-auth';
 import { RegisterDto } from '../dto/register.dto';
@@ -23,6 +27,11 @@ import { RefreshTokenCommand } from '../commands/refresh-token.command';
 import { RefreshTokenHandler } from '../commands/refresh-token.handler';
 import { GetCurrentMemberQuery } from '../queries/get-current-member.query';
 import { GetCurrentMemberHandler } from '../queries/get-current-member.handler';
+import {
+  setRefreshCookie,
+  clearRefreshCookie,
+  readRefreshCookie,
+} from '../utils/refresh-cookie';
 
 @ApiTags('Authentication')
 @Controller('api/auth')
@@ -42,9 +51,14 @@ export class AuthController {
   @ApiResponse({ status: 201, description: 'Member registered successfully', type: AuthResponseDto })
   @ApiResponse({ status: 400, description: 'Validation error' })
   @ApiResponse({ status: 409, description: 'Email already in use' })
-  async register(@Body() dto: RegisterDto): Promise<AuthResponseDto> {
+  async register(
+    @Body() dto: RegisterDto,
+    @Res({ passthrough: true }) res: Response,
+  ): Promise<AuthResponseDto> {
     const command = new RegisterMemberCommand(dto.email, dto.displayName, dto.password);
-    return this.registerHandler.execute(command);
+    const result = await this.registerHandler.execute(command);
+    setRefreshCookie(res, result.refreshToken);
+    return result;
   }
 
   @Public()
@@ -54,9 +68,14 @@ export class AuthController {
   @ApiResponse({ status: 200, description: 'Login successful', type: AuthResponseDto })
   @ApiResponse({ status: 401, description: 'Invalid credentials' })
   @ApiResponse({ status: 403, description: 'Account locked or suspended' })
-  async login(@Body() dto: LoginDto): Promise<AuthResponseDto> {
+  async login(
+    @Body() dto: LoginDto,
+    @Res({ passthrough: true }) res: Response,
+  ): Promise<AuthResponseDto> {
     const command = new LoginMemberCommand(dto.email, dto.password);
-    return this.loginHandler.execute(command);
+    const result = await this.loginHandler.execute(command);
+    setRefreshCookie(res, result.refreshToken);
+    return result;
   }
 
   @Public()
@@ -65,9 +84,19 @@ export class AuthController {
   @ApiOperation({ summary: 'Refresh an expired access token' })
   @ApiResponse({ status: 200, description: 'Tokens refreshed successfully', type: AuthResponseDto })
   @ApiResponse({ status: 401, description: 'Invalid or expired refresh token' })
-  async refresh(@Body() dto: RefreshTokenDto): Promise<AuthResponseDto> {
-    const command = new RefreshTokenCommand(dto.refreshToken);
-    return this.refreshHandler.execute(command);
+  async refresh(
+    @Req() req: Request,
+    @Body() dto: RefreshTokenDto,
+    @Res({ passthrough: true }) res: Response,
+  ): Promise<AuthResponseDto> {
+    const token = readRefreshCookie(req) ?? dto.refreshToken;
+    if (!token) {
+      throw new UnauthorizedException('Refresh token missing');
+    }
+    const command = new RefreshTokenCommand(token);
+    const result = await this.refreshHandler.execute(command);
+    setRefreshCookie(res, result.refreshToken);
+    return result;
   }
 
   @Post('logout')
@@ -76,9 +105,13 @@ export class AuthController {
   @ApiOperation({ summary: 'Logout and invalidate all tokens' })
   @ApiResponse({ status: 204, description: 'Logged out successfully' })
   @ApiResponse({ status: 401, description: 'Not authenticated' })
-  async logout(@CurrentUser() user: AccessTokenPayload): Promise<void> {
+  async logout(
+    @CurrentUser() user: AccessTokenPayload,
+    @Res({ passthrough: true }) res: Response,
+  ): Promise<void> {
     const command = new LogoutMemberCommand(user.userId, user.jti);
     await this.logoutHandler.execute(command);
+    clearRefreshCookie(res);
   }
 
   @Get('me')

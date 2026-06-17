@@ -31,6 +31,7 @@ services:
       JWT_EXPIRATION: ${JWT_EXPIRATION:-15m}
       JWT_REFRESH_EXPIRATION: ${JWT_REFRESH_EXPIRATION:-7d}
       CORS_ALLOWED_ORIGINS: ${CORS_ALLOWED_ORIGINS:-http://localhost:4200}
+      ADMIN_EMAILS: ${ADMIN_EMAILS:-admin@csn.local}
       S3_BUCKET: ${S3_BUCKET:-csn-uploads-dev}
       S3_REGION: ${S3_REGION:-us-east-1}
       S3_ACCESS_KEY: ${S3_ACCESS_KEY:-}

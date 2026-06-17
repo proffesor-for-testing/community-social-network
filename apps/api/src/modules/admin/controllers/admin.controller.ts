@@ -32,6 +32,7 @@ import { Verify2faHandler } from '../commands/verify-2fa.handler';
 import { GetUsersHandler } from '../queries/get-users.handler';
 import { GetAuditLogHandler } from '../queries/get-audit-log.handler';
 import { GetSecurityAlertsHandler } from '../queries/get-security-alerts.handler';
+import { GetAdminStatsHandler } from '../queries/get-stats.handler';
 
 interface AdminUserPayload {
   id: string;
@@ -53,7 +54,15 @@ export class AdminController {
     private readonly getUsersHandler: GetUsersHandler,
     private readonly getAuditLogHandler: GetAuditLogHandler,
     private readonly getSecurityAlertsHandler: GetSecurityAlertsHandler,
+    private readonly getAdminStatsHandler: GetAdminStatsHandler,
   ) {}
+
+  @Get('stats')
+  @ApiOperation({ summary: 'Admin dashboard summary stats' })
+  @ApiResponse({ status: 200, description: 'Aggregate counts' })
+  async getStats() {
+    return this.getAdminStatsHandler.execute();
+  }
 
   @Get('users')
   @ApiOperation({ summary: 'List all users (paginated)' })

@@ -28,6 +28,8 @@ export interface FeedPage {
 type ApiPostResponse = {
   id: string;
   authorId: string;
+  authorName?: string;
+  authorAvatarUrl?: string | null;
   content: string;
   status: string;
   reactionCounts?: Record<string, number>;
@@ -36,15 +38,15 @@ type ApiPostResponse = {
   updatedAt: string;
 };
 
-function adaptPost(p: ApiPostResponse): PublicationDto {
+export function adaptPost(p: ApiPostResponse): PublicationDto {
   const reactionCount = p.reactionCounts
     ? Object.values(p.reactionCounts).reduce((a, b) => a + b, 0)
     : 0;
   return {
     id: p.id,
     authorId: p.authorId,
-    authorName: 'Member',
-    authorAvatarUrl: null,
+    authorName: p.authorName?.trim() ? p.authorName : 'Member',
+    authorAvatarUrl: p.authorAvatarUrl ?? null,
     title: null,
     body: p.content,
     type: 'post',

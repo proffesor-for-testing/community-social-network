@@ -1,5 +1,6 @@
 import { Module } from '@nestjs/common';
 import { CommunityInfrastructureModule } from '@csn/infra-community';
+import { ProfileInfrastructureModule } from '@csn/infra-profile';
 
 import { GroupController } from './controllers/group.controller';
 
@@ -34,7 +35,7 @@ const QueryHandlers = [
 ];
 
 @Module({
-  imports: [CommunityInfrastructureModule],
+  imports: [CommunityInfrastructureModule, ProfileInfrastructureModule],
   controllers: [GroupController],
   providers: [...CommandHandlers, ...QueryHandlers],
   exports: [...CommandHandlers, ...QueryHandlers],

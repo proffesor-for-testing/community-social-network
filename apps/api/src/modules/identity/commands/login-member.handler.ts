@@ -7,6 +7,7 @@ import { JwtTokenService, TokenPayload } from '@csn/infra-auth';
 import { LoginMemberCommand } from './login-member.command';
 import { AuthResponseDto } from '../dto/auth-response.dto';
 import { MemberResponseDto } from '../dto/member-response.dto';
+import { rolesFor } from '../utils/admin-roles';
 
 @Injectable()
 export class LoginMemberHandler {
@@ -64,7 +65,7 @@ export class LoginMemberHandler {
     const tokenPayload: TokenPayload = {
       userId: member.id.value,
       email: member.email.value,
-      roles: ['member'],
+      roles: rolesFor(member.email.value),
     };
     const tokenPair = await this.jwtTokenService.generateTokenPair(tokenPayload, sessionId.value);
 

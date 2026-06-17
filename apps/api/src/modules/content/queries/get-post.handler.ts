@@ -5,6 +5,7 @@ import {
   IPublicationRepository,
   IDiscussionRepository,
 } from '@csn/domain-content';
+import { IProfileRepository } from '@csn/domain-profile';
 import { GetPostQuery } from './get-post.query';
 import { PostResponseDto } from '../dto/post-response.dto';
 
@@ -15,6 +16,8 @@ export class GetPostHandler implements IQueryHandler<GetPostQuery, PostResponseD
     private readonly publicationRepository: IPublicationRepository,
     @Inject('IDiscussionRepository')
     private readonly discussionRepository: IDiscussionRepository,
+    @Inject('IProfileRepository')
+    private readonly profileRepository: IProfileRepository,
   ) {}
 
   async execute(query: GetPostQuery): Promise<PostResponseDto> {
@@ -28,6 +31,11 @@ export class GetPostHandler implements IQueryHandler<GetPostQuery, PostResponseD
     const discussions = await this.discussionRepository.findByPublicationId(postId);
     const commentCount = discussions.length;
 
-    return PostResponseDto.fromDomain(publication, commentCount);
+    const profile = await this.profileRepository.findByMemberId(publication.authorId);
+    const author = profile
+      ? { displayName: profile.displayName.value, avatarUrl: null }
+      : undefined;
+
+    return PostResponseDto.fromDomain(publication, commentCount, author);
   }
 }

@@ -26,7 +26,7 @@ type ApiAlert = {
   id: string;
   recipientId: string;
   type: string;
-  content: { title?: string; body?: string };
+  content: { title?: string; body?: string; actionUrl?: string };
   status: 'UNREAD' | 'READ' | string;
   createdAt: string;
   readAt: string | null;
@@ -40,13 +40,14 @@ type ApiNotificationsResponse = {
   hasNextPage?: boolean;
 };
 
-function adaptAlert(a: ApiAlert): AlertDto {
+export function adaptAlert(a: ApiAlert): AlertDto {
   return {
     id: a.id,
     recipientId: a.recipientId,
     type: (a.type ?? '').toLowerCase(),
     title: a.content?.title ?? '',
     body: a.content?.body ?? '',
+    actionUrl: a.content?.actionUrl ?? null,
     isRead: a.status !== 'UNREAD',
     metadata: {},
     createdAt: a.createdAt,

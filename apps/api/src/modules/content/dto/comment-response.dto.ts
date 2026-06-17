@@ -11,6 +11,12 @@ export class CommentResponseDto {
   @ApiProperty({ description: 'Author member ID (UUID)', example: 'c3d4e5f6-a7b8-9012-cdef-123456789012' })
   authorId!: string;
 
+  @ApiProperty({ description: 'Author display name (joined from Profile)', example: 'Jane Doe' })
+  authorName!: string;
+
+  @ApiPropertyOptional({ description: 'Author avatar URL', example: null, nullable: true })
+  authorAvatarUrl?: string | null;
+
   @ApiProperty({ description: 'Comment text content', example: 'Great post!' })
   content!: string;
 
@@ -26,11 +32,17 @@ export class CommentResponseDto {
   @ApiProperty({ description: 'Comment creation timestamp', example: '2024-01-01T00:00:00.000Z' })
   createdAt!: string;
 
-  public static fromDomain(discussion: Discussion, depth: number = 0): CommentResponseDto {
+  public static fromDomain(
+    discussion: Discussion,
+    depth: number = 0,
+    author?: { displayName?: string; avatarUrl?: string | null },
+  ): CommentResponseDto {
     const dto = new CommentResponseDto();
     dto.id = discussion.id.value;
     dto.postId = discussion.publicationId.value;
     dto.authorId = discussion.authorId.value;
+    dto.authorName = author?.displayName ?? 'Member';
+    dto.authorAvatarUrl = author?.avatarUrl ?? null;
     dto.content = discussion.content.text;
     dto.parentId = discussion.parentId?.value ?? null;
     dto.depth = depth;

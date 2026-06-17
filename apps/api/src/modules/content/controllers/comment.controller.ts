@@ -2,6 +2,8 @@ import {
   Controller,
   Get,
   Post,
+  Patch,
+  Delete,
   Body,
   Param,
   ParseUUIDPipe,
@@ -16,6 +18,9 @@ import { CreateCommentDto } from '../dto/create-comment.dto';
 import { CommentResponseDto } from '../dto/comment-response.dto';
 import { CreateCommentCommand } from '../commands/create-comment.command';
 import { CreateCommentResult } from '../commands/create-comment.handler';
+import { DeleteCommentCommand } from '../commands/delete-comment.command';
+import { UpdateCommentCommand } from '../commands/update-comment.command';
+import { UpdateCommentDto } from '../dto/update-comment.dto';
 import { GetCommentsQuery } from '../queries/get-comments.query';
 
 @ApiTags('comments')
@@ -45,6 +50,38 @@ export class CommentController {
     );
     const result = await this.commandBus.execute<CreateCommentCommand, CreateCommentResult>(command);
     return { id: result.commentId };
+  }
+
+  @Patch('api/discussions/:commentId')
+  @HttpCode(HttpStatus.OK)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Edit a comment (author only)' })
+  @ApiResponse({ status: 200, description: 'Comment updated' })
+  @ApiResponse({ status: 403, description: 'Not the comment author' })
+  @ApiResponse({ status: 404, description: 'Comment not found' })
+  async updateComment(
+    @CurrentUser() user: AccessTokenPayload,
+    @Param('commentId', ParseUUIDPipe) commentId: string,
+    @Body() dto: UpdateCommentDto,
+  ): Promise<{ ok: true }> {
+    await this.commandBus.execute(
+      new UpdateCommentCommand(commentId, user.userId, dto.content),
+    );
+    return { ok: true };
+  }
+
+  @Delete('api/discussions/:commentId')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Soft-delete a comment (author only)' })
+  @ApiResponse({ status: 204, description: 'Comment deleted' })
+  @ApiResponse({ status: 403, description: 'Not the comment author' })
+  @ApiResponse({ status: 404, description: 'Comment not found' })
+  async deleteComment(
+    @CurrentUser() user: AccessTokenPayload,
+    @Param('commentId', ParseUUIDPipe) commentId: string,
+  ): Promise<void> {
+    await this.commandBus.execute(new DeleteCommentCommand(commentId, user.userId));
   }
 
   @Public()

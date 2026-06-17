@@ -32,6 +32,18 @@ export class InMemoryProfileRepository implements IProfileRepository {
     return null;
   }
 
+  async findByMemberIds(memberIds: UserId[]): Promise<Map<string, Profile>> {
+    const result = new Map<string, Profile>();
+    if (memberIds.length === 0) return result;
+    const wanted = new Set(memberIds.map((m) => m.value));
+    for (const entity of this.store.values()) {
+      if (wanted.has(entity.memberId)) {
+        result.set(entity.memberId, this.mapper.toDomain(entity));
+      }
+    }
+    return result;
+  }
+
   async exists(id: ProfileId): Promise<boolean> {
     return this.store.has(id.value);
   }

@@ -12,7 +12,7 @@ import { profileRoutes } from './features/profile/routes';
 import { socialRoutes } from './features/social/routes';
 import { groupRoutes } from './features/groups/routes';
 import { notificationRoutes } from './features/notifications/routes';
-import { adminRoutes } from './features/admin/routes';
+import { adminRoutes, adminPublicRoutes } from './features/admin/routes';
 import { Spinner } from './shared/components/atoms/Spinner';
 import { ErrorBoundary } from './shared/error-boundary';
 
@@ -42,10 +42,10 @@ function PageSuspense({ children }: { children: React.ReactNode }) {
 // ── Route tree ───────────────────────────────────────────────────
 
 const routes: RouteObject[] = [
-  // Public auth routes
+  // Public auth routes (login, register, admin/login)
   {
     element: <AuthLayout />,
-    children: authRoutes,
+    children: [...authRoutes, ...adminPublicRoutes],
   },
 
   // Protected application routes

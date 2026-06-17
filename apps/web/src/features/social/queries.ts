@@ -39,10 +39,12 @@ function normalizePaginated<T>(
   };
 }
 
-// The API returns connection records, not enriched profiles. Until an
-// author-name join exists in the API, synthesize a minimal ProfileDto from
-// the other side of the connection so FollowersList/FollowingList don't crash.
-function connectionToProfile(
+// Builds a ProfileDto for the "other side" of a connection from the
+// perspective of `perspectiveMemberId`. When the perspective member is the
+// followee, the other side is the follower (and vice-versa). The API now
+// joins Profile data into each connection — read the matching name/avatar.
+// Falls back to 'Member' if the API hasn't been redeployed yet.
+export function connectionToProfile(
   c: ApiConnection,
   perspectiveMemberId: string,
 ): ProfileDto {
@@ -50,12 +52,18 @@ function connectionToProfile(
   const otherId = isFollower
     ? (c.followerId ?? c.requesterId ?? '')
     : (c.followeeId ?? c.addresseeId ?? '');
+  const otherName = isFollower
+    ? (c.followerName ?? '')
+    : (c.followeeName ?? '');
+  const otherAvatar = isFollower
+    ? (c.followerAvatarUrl ?? null)
+    : (c.followeeAvatarUrl ?? null);
   return {
     id: c.id,
     memberId: otherId,
-    displayName: 'Member',
+    displayName: otherName.trim() ? otherName : 'Member',
     bio: null,
-    avatarUrl: null,
+    avatarUrl: otherAvatar,
     location: null,
     website: null,
     joinedAt: c.createdAt,
@@ -108,18 +116,26 @@ export async function fetchBlocked(): Promise<ProfileDto[]> {
 type ApiConnection = {
   id: string;
   followerId?: string;
+  followerName?: string;
+  followerAvatarUrl?: string | null;
   followeeId?: string;
+  followeeName?: string;
+  followeeAvatarUrl?: string | null;
   requesterId?: string;
   addresseeId?: string;
   status: string;
   createdAt: string;
 };
 
-function adaptConnection(c: ApiConnection): ConnectionDto {
+export function adaptConnection(c: ApiConnection): ConnectionDto {
   return {
     id: c.id,
     requesterId: c.requesterId ?? c.followerId ?? '',
+    requesterName: c.followerName,
+    requesterAvatarUrl: c.followerAvatarUrl ?? null,
     addresseeId: c.addresseeId ?? c.followeeId ?? '',
+    addresseeName: c.followeeName,
+    addresseeAvatarUrl: c.followeeAvatarUrl ?? null,
     status: (c.status ?? '').toLowerCase() as ConnectionDto['status'],
     createdAt: c.createdAt,
   };
@@ -142,23 +158,8 @@ export async function fetchConnectionStatus(
     );
     return adaptConnection(data);
   } catch {
-    // 404 from /status means no accepted connection. Fall back to checking
-    // pending requests so the FollowButton can reflect "Pending".
-    try {
-      const { data } = await apiClient.get<{ items: ApiConnection[] }>(
-        '/connections/pending',
-      );
-      const pending = (data.items ?? []).find(
-        (c) =>
-          (c.followeeId ?? c.addresseeId) === memberId ||
-          (c.followerId ?? c.requesterId) === memberId,
-      );
-      if (pending) {
-        return { ...adaptConnection(pending), status: 'pending' };
-      }
-    } catch {
-      // ignore
-    }
+    // 404 → no connection at all. The status endpoint now returns pending
+    // requests in either direction, so a fallback isn't needed here.
     return null;
   }
 }

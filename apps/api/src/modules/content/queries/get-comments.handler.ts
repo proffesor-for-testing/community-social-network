@@ -6,6 +6,8 @@ import {
   IPublicationRepository,
   IDiscussionRepository,
 } from '@csn/domain-content';
+import { IProfileRepository } from '@csn/domain-profile';
+import { UserId } from '@csn/domain-shared';
 import { GetCommentsQuery } from './get-comments.query';
 import { CommentResponseDto } from '../dto/comment-response.dto';
 
@@ -16,6 +18,8 @@ export class GetCommentsHandler implements IQueryHandler<GetCommentsQuery, Comme
     private readonly publicationRepository: IPublicationRepository,
     @Inject('IDiscussionRepository')
     private readonly discussionRepository: IDiscussionRepository,
+    @Inject('IProfileRepository')
+    private readonly profileRepository: IProfileRepository,
   ) {}
 
   async execute(query: GetCommentsQuery): Promise<CommentResponseDto[]> {
@@ -27,13 +31,26 @@ export class GetCommentsHandler implements IQueryHandler<GetCommentsQuery, Comme
     }
 
     const discussions = await this.discussionRepository.findByPublicationId(postId);
+    const active = discussions.filter((d) => d.status.isActive());
 
-    // Build threaded view: calculate depth for each comment
     const depthMap = this.calculateDepths(discussions);
 
-    return discussions
-      .filter((d) => d.status.isActive())
-      .map((d) => CommentResponseDto.fromDomain(d, depthMap.get(d.id.value) ?? 0));
+    // Batch-fetch profiles for unique authors (no N+1).
+    const uniqueAuthorIds = Array.from(
+      new Set(active.map((d) => d.authorId.value)),
+    ).map((id) => UserId.create(id));
+    const profileByMemberId =
+      uniqueAuthorIds.length > 0
+        ? await this.profileRepository.findByMemberIds(uniqueAuthorIds)
+        : new Map();
+
+    return active.map((d) => {
+      const profile = profileByMemberId.get(d.authorId.value);
+      const author = profile
+        ? { displayName: profile.displayName.value, avatarUrl: null }
+        : undefined;
+      return CommentResponseDto.fromDomain(d, depthMap.get(d.id.value) ?? 0, author);
+    });
   }
 
   private calculateDepths(discussions: Discussion[]): Map<string, number> {

@@ -1,5 +1,5 @@
 import { randomUUID } from 'crypto';
-import { Repository, FindOptionsWhere } from 'typeorm';
+import { Repository, FindOptionsWhere, In } from 'typeorm';
 import { UserId } from '@csn/domain-shared';
 import { Profile, ProfileId, IProfileRepository } from '@csn/domain-profile';
 import { BaseRepository } from '@csn/infra-shared';
@@ -32,5 +32,18 @@ export class PostgresProfileRepository
     });
     if (!entity) return null;
     return this.mapper.toDomain(entity);
+  }
+
+  async findByMemberIds(memberIds: UserId[]): Promise<Map<string, Profile>> {
+    const result = new Map<string, Profile>();
+    if (memberIds.length === 0) return result;
+    const ids = memberIds.map((m) => m.value);
+    const entities = await this.ormRepository.find({
+      where: { memberId: In(ids) } as FindOptionsWhere<ProfileEntity>,
+    });
+    for (const entity of entities) {
+      result.set(entity.memberId, this.mapper.toDomain(entity));
+    }
+    return result;
   }
 }

@@ -120,6 +120,15 @@ export class Discussion extends AggregateRoot<DiscussionId> {
     this.incrementVersion();
   }
 
+  /**
+   * Edit the comment text. Author-authorization is enforced by the
+   * application-layer command handler, not here.
+   */
+  public editContent(newContent: DiscussionContent): void {
+    this._content = newContent;
+    this.incrementVersion();
+  }
+
   public isReply(): boolean {
     return this._parentId !== null;
   }
