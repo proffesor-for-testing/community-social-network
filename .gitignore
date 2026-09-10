@@ -64,6 +64,8 @@ coordination/orchestration/*
 
 # Agentic QE
 .agentic-qe/
+agentdb.rvf
+agentdb.rvf.lock
 .claude/
 hive-mind-prompt-*.txt
 claude-flow
