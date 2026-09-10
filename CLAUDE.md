@@ -38,7 +38,7 @@
 
 **Before spawning agents:**
 ```bash
-npx @claude-flow/cli@latest hooks pre-task --description "[task description]"
+ruflo hooks pre-task --description "[task description]"
 ```
 
 - `[AGENT_BOOSTER_AVAILABLE]` → Skip LLM, use Edit tool directly
@@ -50,10 +50,10 @@ npx @claude-flow/cli@latest hooks pre-task --description "[task description]"
 
 ```bash
 # Small teams (6-8 agents)
-npx @claude-flow/cli@latest swarm init --topology hierarchical --max-agents 8 --strategy specialized
+ruflo swarm init --topology hierarchical --max-agents 8 --strategy specialized
 
 # Large teams (10-15 agents)
-npx @claude-flow/cli@latest swarm init --topology hierarchical-mesh --max-agents 15 --strategy specialized
+ruflo swarm init --topology hierarchical-mesh --max-agents 15 --strategy specialized
 ```
 
 **Anti-Drift Guidelines:**
@@ -67,7 +67,7 @@ npx @claude-flow/cli@latest swarm init --topology hierarchical-mesh --max-agents
 
 ```javascript
 // STEP 1: Initialize swarm coordination
-Bash("npx @claude-flow/cli@latest swarm init --topology hierarchical --max-agents 8 --strategy specialized")
+Bash("ruflo swarm init --topology hierarchical --max-agents 8 --strategy specialized")
 
 // STEP 2: Spawn ALL agents IN BACKGROUND in a SINGLE message
 Task({ prompt: "Research requirements", subagent_type: "researcher", run_in_background: true })
@@ -153,10 +153,10 @@ Working in parallel - I'll synthesize when they complete."
 
 ### CLI Tools Handle Coordination (via Bash):
 ```bash
-npx @claude-flow/cli@latest swarm init --topology <type>
-npx @claude-flow/cli@latest memory store --key "mykey" --value "myvalue" --namespace patterns
-npx @claude-flow/cli@latest memory search --query "search terms"
-npx @claude-flow/cli@latest hooks <hook-name> [options]
+ruflo swarm init --topology <type>
+ruflo memory store --key "mykey" --value "myvalue" --namespace patterns
+ruflo memory search --query "search terms"
+ruflo hooks <hook-name> [options]
 ```
 
 ---
