@@ -328,6 +328,79 @@ describe('BaseRepository', () => {
   });
 
   // -----------------------------------------------------------------------
+  // save - optimistic lock guard uses the LOADED version, not the stored one
+  // -----------------------------------------------------------------------
+  describe('save() stale-instance protection', () => {
+    it('should guard on the version the aggregate was loaded at even when the stored version has moved on', async () => {
+      // Arrange — loaded at 2, another writer has since committed 3
+      mockOrm.findOne.mockResolvedValue({ id: 'agg-1', name: 'Alice', version: 3 });
+      const stale = TestAggregate.reconstitute('agg-1', 'Alice', 2);
+      stale.rename('stale write');
+
+      // Act
+      await repository.save(stale);
+
+      // Assert
+      expect(mockQb.andWhere).toHaveBeenCalledWith('"version" = :previousVersion', {
+        previousVersion: 2,
+      });
+    });
+
+    it('should advance the stored version past the loaded version on every update', async () => {
+      // Arrange — aggregate did not bump its own version
+      mockOrm.findOne.mockResolvedValue({ id: 'agg-1', name: 'Alice', version: 2 });
+      const aggregate = TestAggregate.reconstitute('agg-1', 'Alice', 2);
+
+      // Act
+      await repository.save(aggregate);
+
+      // Assert
+      const [setArg] = mockQb.set.mock.calls[0]!;
+      expect((setArg as { version: number }).version).toBe(3);
+    });
+
+    it('should mark the aggregate persisted at the new version after a successful update', async () => {
+      // Arrange
+      mockOrm.findOne.mockResolvedValue({ id: 'agg-1', name: 'Alice', version: 2 });
+      const aggregate = TestAggregate.reconstitute('agg-1', 'Alice', 2);
+      aggregate.rename('v3');
+
+      // Act
+      await repository.save(aggregate);
+
+      // Assert
+      expect(aggregate.persistedVersion).toBe(3);
+    });
+
+    it('should mark a newly inserted aggregate as persisted at version >= 1', async () => {
+      // Arrange
+      mockOrm.findOne.mockResolvedValue(null);
+      const aggregate = TestAggregate.create('agg-new', 'Fresh');
+
+      // Act
+      await repository.save(aggregate);
+
+      // Assert
+      expect(aggregate.persistedVersion).toBeGreaterThanOrEqual(1);
+    });
+
+    it('should fall back to the stored version as guard for legacy instances with persistedVersion 0', async () => {
+      // Arrange — reconstituted at 0 (row written before version tracking)
+      mockOrm.findOne.mockResolvedValue({ id: 'agg-1', name: 'Alice', version: 5 });
+      const legacy = TestAggregate.reconstitute('agg-1', 'Alice', 0);
+      legacy.rename('touch');
+
+      // Act
+      await repository.save(legacy);
+
+      // Assert
+      expect(mockQb.andWhere).toHaveBeenCalledWith('"version" = :previousVersion', {
+        previousVersion: 5,
+      });
+    });
+  });
+
+  // -----------------------------------------------------------------------
   // save - version conflict
   // -----------------------------------------------------------------------
   describe('save() with version conflict', () => {
@@ -473,8 +546,8 @@ describe('BaseRepository', () => {
       // Reconstitute at version 2 without incrementing -- simulates an
       // aggregate loaded from the DB at version 2 that is being saved as-is
       // (e.g., after only pulling domain events but not modifying state).
-      // The row currently in the database is at version 1.
-      mockOrm.findOne.mockResolvedValue({ id: 'agg-1', name: 'Alice', version: 1 });
+      // The row in the database is still at the loaded version, 2.
+      mockOrm.findOne.mockResolvedValue({ id: 'agg-1', name: 'Alice', version: 2 });
       const aggregate = TestAggregate.reconstitute('agg-1', 'Alice', 2);
 
       await repository.save(aggregate);
@@ -482,7 +555,7 @@ describe('BaseRepository', () => {
       expect(mockOrm.createQueryBuilder).toHaveBeenCalledOnce();
       expect(mockQb.andWhere).toHaveBeenCalledWith(
         '"version" = :previousVersion',
-        { previousVersion: 1 },
+        { previousVersion: 2 },
       );
     });
 

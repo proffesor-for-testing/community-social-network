@@ -39,6 +39,13 @@ export class MemberEntity {
   })
   lastLoginAt!: Date | null;
 
+  @Column({
+    name: 'is_admin',
+    type: 'boolean',
+    default: false,
+  })
+  isAdmin!: boolean;
+
   @CreateDateColumn({ name: 'created_at', type: 'timestamp' })
   createdAt!: Date;
 

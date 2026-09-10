@@ -12,5 +12,5 @@ export class UpdatePreferencesDto {
     },
   })
   @IsObject()
-  preferences: Record<string, string[]>;
+  preferences!: Record<string, string[]>;
 }

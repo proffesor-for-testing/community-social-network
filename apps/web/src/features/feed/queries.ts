@@ -32,6 +32,7 @@ type ApiPostResponse = {
   authorAvatarUrl?: string | null;
   content: string;
   status: string;
+  groupId?: string | null;
   reactionCounts?: Record<string, number>;
   commentCount?: number;
   viewerReaction?: string | null;
@@ -74,6 +75,7 @@ export function adaptPost(p: ApiPostResponse): PublicationDto {
     type: 'post',
     status: (p.status?.toLowerCase() ?? 'published') as PublicationDto['status'],
     tags: [],
+    groupId: p.groupId ?? null,
     reactionCount,
     commentCount: p.commentCount ?? 0,
     viewerReaction: adaptViewerReaction(p.viewerReaction),
@@ -91,6 +93,25 @@ export async function fetchFeed(cursor?: string): Promise<FeedPage> {
     items: ApiPostResponse[];
     nextCursor: string | null;
   }>('/publications/feed', { params });
+  return {
+    items: data.items.map(adaptPost),
+    nextCursor: data.nextCursor,
+  };
+}
+
+/**
+ * Explore: every public post, independent of who the viewer follows.
+ * The main feed became follower-scoped, so discovery lives on its own endpoint.
+ */
+export async function fetchExploreFeed(cursor?: string): Promise<FeedPage> {
+  const params: Record<string, string> = { limit: '20' };
+  if (cursor) {
+    params.cursor = cursor;
+  }
+  const { data } = await apiClient.get<{
+    items: ApiPostResponse[];
+    nextCursor: string | null;
+  }>('/publications/explore', { params });
   return {
     items: data.items.map(adaptPost),
     nextCursor: data.nextCursor,

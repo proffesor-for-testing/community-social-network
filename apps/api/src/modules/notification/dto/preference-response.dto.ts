@@ -3,10 +3,10 @@ import { Preference } from '@csn/domain-notification';
 
 export class PreferenceResponseDto {
   @ApiProperty({ description: 'Preference ID (UUID)', example: 'a1b2c3d4-e5f6-7890-abcd-ef1234567890' })
-  id: string;
+  id!: string;
 
   @ApiProperty({ description: 'Member ID (UUID)', example: 'b2c3d4e5-f6a7-8901-bcde-f12345678901' })
-  memberId: string;
+  memberId!: string;
 
   @ApiProperty({
     description: 'Map of alert type to enabled delivery channels',
@@ -15,7 +15,7 @@ export class PreferenceResponseDto {
       LIKE: ['IN_APP'],
     },
   })
-  preferences: Record<string, string[]>;
+  preferences!: Record<string, string[]>;
 
   public static fromDomain(preference: Preference): PreferenceResponseDto {
     const dto = new PreferenceResponseDto();

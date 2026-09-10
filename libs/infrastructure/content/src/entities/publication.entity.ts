@@ -1,6 +1,7 @@
 import {
   Entity,
   Column,
+  Index,
   PrimaryColumn,
   OneToMany,
   CreateDateColumn,
@@ -26,6 +27,11 @@ export class PublicationEntity {
 
   @Column('varchar', { length: 32 })
   visibility!: string;
+
+  /** Community group this post belongs to; null for personal / main-feed posts. */
+  @Index('IDX_publications_group_id')
+  @Column('uuid', { name: 'group_id', nullable: true })
+  groupId!: string | null;
 
   @CreateDateColumn({ name: 'created_at', type: 'timestamp' })
   createdAt!: Date;

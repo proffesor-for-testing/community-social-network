@@ -3,12 +3,13 @@ import { UnauthorizedException, ForbiddenException } from '@nestjs/common';
 import { AdminLoginHandler } from '../commands/admin-login.handler';
 import { AdminLoginCommand } from '../commands/admin-login.command';
 
-function activeMember() {
+function activeMember(isAdmin = true) {
   return {
     id: { value: 'a1b2c3d4-e5f6-4890-abcd-ef1234567890' },
     email: { value: 'admin@example.com' },
     credential: { value: '$2b$10$hashed' },
     status: { value: 'ACTIVE' },
+    isAdmin,
   };
 }
 
@@ -54,8 +55,8 @@ describe('AdminLoginHandler', () => {
     else process.env['ADMIN_EMAILS'] = previousAdminEmails;
   });
 
-  it('rejects a member whose email is NOT on the admin allowlist, even with correct password', async () => {
-    process.env['ADMIN_EMAILS'] = 'someone-else@example.com';
+  it('rejects a member whose isAdmin flag is false, even with correct password', async () => {
+    memberRepo.findByEmail.mockResolvedValueOnce(activeMember(false));
 
     await expect(
       handler.execute({

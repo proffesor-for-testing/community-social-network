@@ -26,6 +26,9 @@ export class AdminUserResponseDto {
   @ApiProperty({ description: 'Account creation timestamp', example: '2024-01-15T10:30:00.000Z' })
   createdAt!: string;
 
+  @ApiProperty({ description: 'Whether the member holds admin privileges', example: false })
+  isAdmin!: boolean;
+
   static fromDomain(member: {
     id: { value: string };
     email: { value: string };
@@ -34,6 +37,7 @@ export class AdminUserResponseDto {
     failedLoginAttempts: number;
     lastLoginAt: { value: Date } | null;
     createdAt: { value: Date };
+    isAdmin: boolean;
   }): AdminUserResponseDto {
     const dto = new AdminUserResponseDto();
     dto.id = member.id.value;
@@ -45,6 +49,7 @@ export class AdminUserResponseDto {
       ? member.lastLoginAt.value.toISOString()
       : null;
     dto.createdAt = member.createdAt.value.toISOString();
+    dto.isAdmin = member.isAdmin;
     return dto;
   }
 }

@@ -5,6 +5,7 @@ import { Spinner } from '../../../shared/components/atoms/Spinner';
 import { useProfile } from '../hooks/useProfile';
 import { useAuthStore } from '../../../stores/auth.store';
 import { FollowButton } from '../../social/components/FollowButton';
+import { MessageButton } from '../../messages/components/MessageButton';
 
 interface ProfileHeaderProps {
   memberId?: string;
@@ -55,7 +56,12 @@ export function ProfileHeader({ memberId }: ProfileHeaderProps) {
               Joined {new Date(profile.joinedAt).toLocaleDateString()}
             </p>
           </div>
-          {isOtherUser && <FollowButton memberId={profile.memberId} />}
+          {isOtherUser && (
+            <div className="flex items-center gap-2">
+              <FollowButton memberId={profile.memberId} />
+              <MessageButton memberId={profile.memberId} />
+            </div>
+          )}
         </div>
 
         {profile.bio && (

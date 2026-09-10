@@ -4,6 +4,8 @@ import {
   fetchAdminUsers,
   suspendUser,
   unsuspendUser,
+  promoteUser,
+  demoteUser,
 } from '../queries';
 import type { PaginatedResponse, CurrentUserDto } from '../../../api/types';
 import { parseApiError, type ApiError } from '../../../api/error-handler';
@@ -28,6 +30,27 @@ export function useSuspendUser() {
     onSuccess: (_data, { unsuspend }) => {
       queryClient.invalidateQueries({ queryKey: adminKeys.users() });
       addToast(unsuspend ? 'User unsuspended' : 'User suspended', 'success');
+    },
+    onError: (error) => {
+      const parsed = parseApiError(error);
+      addToast(parsed.message, 'error');
+    },
+  });
+}
+
+export function usePromoteUser() {
+  const queryClient = useQueryClient();
+  const addToast = useToastStore((s) => s.addToast);
+
+  return useMutation<void, ApiError, { userId: string; demote?: boolean }>({
+    mutationFn: ({ userId, demote }) =>
+      demote ? demoteUser(userId) : promoteUser(userId),
+    onSuccess: (_data, { demote }) => {
+      queryClient.invalidateQueries({ queryKey: adminKeys.users() });
+      addToast(
+        demote ? 'Admin privileges revoked' : 'User promoted to admin',
+        'success',
+      );
     },
     onError: (error) => {
       const parsed = parseApiError(error);

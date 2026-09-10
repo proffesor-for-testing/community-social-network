@@ -10,6 +10,7 @@ export class ApproveFollowHandler {
   constructor(
     @Inject('IConnectionRepository')
     private readonly connectionRepo: IConnectionRepository,
+    @Inject(AlertCreatorService)
     private readonly alerts: AlertCreatorService,
   ) {}
 

@@ -19,3 +19,4 @@ export { ContentInfrastructureModule } from './content.infrastructure.module';
 
 // Migrations
 export { CreateContentTables1710000002000 } from './migrations/1710000002000-create-content-tables';
+export { AddPublicationGroupId1710000007000 } from './migrations/1710000007000-add-publication-group-id';

@@ -1,7 +1,7 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
-import { fetchFeed, feedKeys } from '../features/feed/queries';
+import { fetchExploreFeed, feedKeys } from '../features/feed/queries';
 import { fetchGroups, groupKeys } from '../features/groups/queries';
 import { Avatar } from '../shared/components/atoms/Avatar';
 import { Spinner } from '../shared/components/atoms/Spinner';
@@ -10,7 +10,7 @@ import type { PublicationDto, GroupDto } from '../api/types';
 function TrendingPostsSection() {
   const { data, isLoading, isError } = useQuery({
     queryKey: feedKeys.list('explore'),
-    queryFn: () => fetchFeed(),
+    queryFn: () => fetchExploreFeed(),
     staleTime: 60 * 1000,
   });
 

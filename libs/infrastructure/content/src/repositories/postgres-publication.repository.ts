@@ -1,10 +1,13 @@
 import { randomUUID } from 'crypto';
-import { Repository, FindOptionsWhere } from 'typeorm';
+import { Repository, FindOptionsWhere, IsNull, SelectQueryBuilder } from 'typeorm';
 import { UserId } from '@csn/domain-shared';
 import {
   Publication,
   PublicationId,
+  GroupId,
   IPublicationRepository,
+  FeedPageOptions,
+  FeedCursorPosition,
 } from '@csn/domain-content';
 import { BaseRepository } from '@csn/infra-shared';
 import { PublicationEntity } from '../entities/publication.entity';
@@ -118,6 +121,8 @@ export class PostgresPublicationRepository
       where: {
         status: 'PUBLISHED',
         visibility: 'PUBLIC',
+        // Group posts stay inside their group and never surface on Explore.
+        groupId: IsNull(),
       } as FindOptionsWhere<PublicationEntity>,
       relations: ['mentions', 'reactions'],
       order: { createdAt: 'DESC' },
@@ -130,5 +135,83 @@ export class PostgresPublicationRepository
         reactions: entity.reactions ?? [],
       }),
     );
+  }
+
+  async findFeedForAuthors(
+    authorIds: UserId[],
+    options: FeedPageOptions,
+  ): Promise<Publication[]> {
+    if (authorIds.length === 0) {
+      return [];
+    }
+
+    const query = this.ormRepository
+      .createQueryBuilder('publication')
+      .leftJoinAndSelect('publication.mentions', 'mention')
+      .leftJoinAndSelect('publication.reactions', 'reaction')
+      .where('publication.status = :status', { status: 'PUBLISHED' })
+      .andWhere('publication.groupId IS NULL')
+      .andWhere('publication.authorId IN (:...authorIds)', {
+        authorIds: authorIds.map((id) => id.value),
+      });
+
+    this.applyKeysetCursor(query, options.cursor ?? null);
+
+    const entities = await query
+      .orderBy('publication.createdAt', 'DESC')
+      .addOrderBy('publication.id', 'DESC')
+      .take(options.limit)
+      .getMany();
+
+    return entities.map((entity) => this.toDomainEntity(entity));
+  }
+
+  async findByGroupId(
+    groupId: GroupId,
+    options: FeedPageOptions,
+  ): Promise<Publication[]> {
+    const query = this.ormRepository
+      .createQueryBuilder('publication')
+      .leftJoinAndSelect('publication.mentions', 'mention')
+      .leftJoinAndSelect('publication.reactions', 'reaction')
+      .where('publication.status = :status', { status: 'PUBLISHED' })
+      .andWhere('publication.groupId = :groupId', { groupId: groupId.value });
+
+    this.applyKeysetCursor(query, options.cursor ?? null);
+
+    const entities = await query
+      .orderBy('publication.createdAt', 'DESC')
+      .addOrderBy('publication.id', 'DESC')
+      .take(options.limit)
+      .getMany();
+
+    return entities.map((entity) => this.toDomainEntity(entity));
+  }
+
+  /**
+   * Keyset predicate matching the (created_at DESC, id DESC) ordering: take
+   * rows strictly older than the cursor, plus rows sharing the timestamp whose
+   * id sorts lower, so posts created in the same millisecond are never skipped
+   * or repeated across pages.
+   */
+  private applyKeysetCursor(
+    query: SelectQueryBuilder<PublicationEntity>,
+    cursor: FeedCursorPosition | null,
+  ): void {
+    if (!cursor) {
+      return;
+    }
+    query.andWhere(
+      '(publication.createdAt < :cursorCreatedAt OR (publication.createdAt = :cursorCreatedAt AND publication.id < :cursorId))',
+      { cursorCreatedAt: cursor.createdAt, cursorId: cursor.id },
+    );
+  }
+
+  private toDomainEntity(entity: PublicationEntity): Publication {
+    return this.publicationMapper.toDomain({
+      publication: entity,
+      mentions: entity.mentions ?? [],
+      reactions: entity.reactions ?? [],
+    });
   }
 }

@@ -107,7 +107,7 @@ jobs:
         uses: nrwl/nx-set-shas@v4
 
       - name: Run tests
-        run: npx nx affected --target=test --parallel=3 --run
+        run: npm test
 
       - name: Upload coverage report
         if: always()
@@ -116,6 +116,54 @@ jobs:
           name: coverage-report
           path: coverage/
           retention-days: 7
+
+  # ---------------------------------------------------------------------------
+  # Persistence tests: run the Postgres-backed repository suite against a
+  # live database service container.
+  # ---------------------------------------------------------------------------
+  persistence-tests:
+    name: Persistence Tests
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:15-alpine
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: csn_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    env:
+      NODE_ENV: test
+      DB_HOST: localhost
+      DB_PORT: 5432
+      DB_USERNAME: postgres
+      DB_PASSWORD: postgres
+      DB_DATABASE: csn_test
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run persistence tests
+        run: npm run test:persistence
 
   # ---------------------------------------------------------------------------
   # Build: verify that all applications compile
@@ -139,11 +187,8 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Derive NX SHAs for affected
-        uses: nrwl/nx-set-shas@v4
-
-      - name: Build affected projects
-        run: npx nx affected --target=build --parallel=3
+      - name: Build projects
+        run: npm run build
 
       - name: Upload build artifacts
         uses: actions/upload-artifact@v4

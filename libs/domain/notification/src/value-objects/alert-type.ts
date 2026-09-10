@@ -5,5 +5,6 @@ export enum AlertType {
   MENTION = 'MENTION',
   GROUP_INVITE = 'GROUP_INVITE',
   GROUP_POST = 'GROUP_POST',
+  MESSAGE = 'MESSAGE',
   SYSTEM = 'SYSTEM',
 }

@@ -22,5 +22,8 @@ export { RefreshTokenHandler } from './commands/refresh-token.handler';
 export { GetCurrentMemberQuery } from './queries/get-current-member.query';
 export { GetCurrentMemberHandler } from './queries/get-current-member.handler';
 
+// Services
+export { AdminBootstrapService } from './services/admin-bootstrap.service';
+
 // Controller
 export { AuthController } from './controllers/auth.controller';

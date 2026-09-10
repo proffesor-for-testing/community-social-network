@@ -8,6 +8,7 @@ import { LoginMemberHandler } from './commands/login-member.handler';
 import { LogoutMemberHandler } from './commands/logout-member.handler';
 import { RefreshTokenHandler } from './commands/refresh-token.handler';
 import { GetCurrentMemberHandler } from './queries/get-current-member.handler';
+import { AdminBootstrapService } from './services/admin-bootstrap.service';
 
 @Module({
   imports: [
@@ -22,6 +23,7 @@ import { GetCurrentMemberHandler } from './queries/get-current-member.handler';
     LogoutMemberHandler,
     RefreshTokenHandler,
     GetCurrentMemberHandler,
+    AdminBootstrapService,
   ],
 })
 export class IdentityModule {}

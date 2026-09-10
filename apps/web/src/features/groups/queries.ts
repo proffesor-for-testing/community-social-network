@@ -5,6 +5,7 @@ import type {
   PaginatedResponse,
 } from '../../api/types';
 import { apiClient } from '../../api/client';
+import { adaptPost, type FeedPage } from '../feed/queries';
 
 // ── Query Key Factories ─────────────────────────────────────────
 
@@ -15,6 +16,7 @@ export const groupKeys = {
   members: (groupId: string, page?: number) =>
     [...groupKeys.all, groupId, 'members', page] as const,
   myGroups: () => [...groupKeys.all, 'mine'] as const,
+  posts: (groupId: string) => [...groupKeys.all, groupId, 'posts'] as const,
 };
 
 // ── API Functions ───────────────────────────────────────────────
@@ -90,5 +92,37 @@ export async function leaveGroup(groupId: string): Promise<void> {
 
 export async function fetchMyGroups(): Promise<GroupDto[]> {
   const { data } = await apiClient.get<GroupDto[]>('/groups/mine');
+  return data;
+}
+
+// ── Group posts ─────────────────────────────────────────────────
+
+/** One page of a group's feed. Members only; the API rejects everyone else. */
+export async function fetchGroupPublications(
+  groupId: string,
+  cursor?: string,
+): Promise<FeedPage> {
+  const params: Record<string, string> = { limit: '20' };
+  if (cursor) {
+    params.cursor = cursor;
+  }
+  const { data } = await apiClient.get<{
+    items: Parameters<typeof adaptPost>[0][];
+    nextCursor: string | null;
+  }>(`/groups/${groupId}/publications`, { params });
+  return {
+    items: data.items.map(adaptPost),
+    nextCursor: data.nextCursor,
+  };
+}
+
+export async function createGroupPublication(
+  groupId: string,
+  content: string,
+): Promise<{ id: string }> {
+  const { data } = await apiClient.post<{ id: string }>(
+    `/groups/${groupId}/publications`,
+    { content },
+  );
   return data;
 }

@@ -16,6 +16,7 @@ export class LoginMemberHandler {
     private readonly memberRepository: IMemberRepository,
     @Inject(SESSION_REPOSITORY_TOKEN)
     private readonly sessionRepository: ISessionRepository,
+    @Inject(JwtTokenService)
     private readonly jwtTokenService: JwtTokenService,
   ) {}
 
@@ -65,7 +66,7 @@ export class LoginMemberHandler {
     const tokenPayload: TokenPayload = {
       userId: member.id.value,
       email: member.email.value,
-      roles: rolesFor(member.email.value),
+      roles: rolesFor(member),
     };
     const tokenPair = await this.jwtTokenService.generateTokenPair(tokenPayload, sessionId.value);
 

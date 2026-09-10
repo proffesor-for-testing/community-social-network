@@ -74,11 +74,19 @@ export async function fetchAdminUsers(
 }
 
 export async function suspendUser(userId: string): Promise<void> {
-  await apiClient.patch(`/admin/users/${userId}/suspend`);
+  await apiClient.put(`/admin/users/${userId}/suspend`);
 }
 
 export async function unsuspendUser(userId: string): Promise<void> {
-  await apiClient.patch(`/admin/users/${userId}/unsuspend`);
+  await apiClient.put(`/admin/users/${userId}/unsuspend`);
+}
+
+export async function promoteUser(userId: string): Promise<void> {
+  await apiClient.post(`/admin/users/${userId}/promote`);
+}
+
+export async function demoteUser(userId: string): Promise<void> {
+  await apiClient.post(`/admin/users/${userId}/demote`);
 }
 
 export async function fetchSecurityAlerts(): Promise<SecurityAlertDto[]> {

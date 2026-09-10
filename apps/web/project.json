@@ -18,9 +18,10 @@
       }
     },
     "test": {
-      "executor": "@nx/vite:test",
+      "executor": "nx:run-commands",
       "options": {
-        "passWithNoTests": true
+        "command": "vitest run apps/web",
+        "cwd": "{workspaceRoot}"
       }
     },
     "lint": {

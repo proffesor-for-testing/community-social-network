@@ -27,6 +27,8 @@ import { Setup2faDto } from '../dto/setup-2fa.dto';
 import { Verify2faDto } from '../dto/verify-2fa.dto';
 import { SuspendUserHandler } from '../commands/suspend-user.handler';
 import { UnsuspendUserHandler } from '../commands/unsuspend-user.handler';
+import { PromoteUserHandler } from '../commands/promote-user.handler';
+import { DemoteUserHandler } from '../commands/demote-user.handler';
 import { Setup2faHandler } from '../commands/setup-2fa.handler';
 import { Verify2faHandler } from '../commands/verify-2fa.handler';
 import { GetUsersHandler } from '../queries/get-users.handler';
@@ -49,6 +51,8 @@ export class AdminController {
   constructor(
     private readonly suspendUserHandler: SuspendUserHandler,
     private readonly unsuspendUserHandler: UnsuspendUserHandler,
+    private readonly promoteUserHandler: PromoteUserHandler,
+    private readonly demoteUserHandler: DemoteUserHandler,
     private readonly setup2faHandler: Setup2faHandler,
     private readonly verify2faHandler: Verify2faHandler,
     private readonly getUsersHandler: GetUsersHandler,
@@ -113,6 +117,47 @@ export class AdminController {
     const ipAddress = this.extractIpAddress(req);
 
     return this.unsuspendUserHandler.execute({
+      adminId: admin.id,
+      targetUserId: id,
+      ipAddress,
+    });
+  }
+
+  @Post('users/:id/promote')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Grant admin privileges to a user' })
+  @ApiParam({ name: 'id', description: 'User UUID to promote' })
+  @ApiResponse({ status: 200, description: 'User promoted to admin' })
+  @ApiResponse({ status: 404, description: 'User not found' })
+  async promoteUser(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Req() req: Request,
+  ) {
+    const admin = this.getAdminUser(req);
+    const ipAddress = this.extractIpAddress(req);
+
+    return this.promoteUserHandler.execute({
+      adminId: admin.id,
+      targetUserId: id,
+      ipAddress,
+    });
+  }
+
+  @Post('users/:id/demote')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Revoke admin privileges from a user' })
+  @ApiParam({ name: 'id', description: 'User UUID to demote' })
+  @ApiResponse({ status: 200, description: 'User demoted from admin' })
+  @ApiResponse({ status: 403, description: 'An admin cannot demote themselves' })
+  @ApiResponse({ status: 404, description: 'User not found' })
+  async demoteUser(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Req() req: Request,
+  ) {
+    const admin = this.getAdminUser(req);
+    const ipAddress = this.extractIpAddress(req);
+
+    return this.demoteUserHandler.execute({
       adminId: admin.id,
       targetUserId: id,
       ipAddress,
@@ -184,7 +229,7 @@ export class AdminController {
   }
 
   private getAdminUser(req: Request): AdminUserPayload {
-    return (req as Record<string, unknown>)['adminUser'] as AdminUserPayload;
+    return (req as unknown as Record<string, unknown>)['adminUser'] as AdminUserPayload;
   }
 
   private extractIpAddress(req: Request): string {

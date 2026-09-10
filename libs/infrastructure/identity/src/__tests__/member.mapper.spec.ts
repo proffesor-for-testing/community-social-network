@@ -36,6 +36,7 @@ describe('MemberMapper', () => {
     entity.failedLoginAttempts = 0;
     entity.lastLoginAt = new Date('2025-06-15T10:00:00Z');
     entity.createdAt = new Date('2025-01-01T00:00:00Z');
+    entity.isAdmin = false;
     entity.version = 3;
     return entity;
   }
@@ -160,6 +161,55 @@ describe('MemberMapper', () => {
       const restored = mapper.toDomain(entity);
 
       expect(restored.lastLoginAt).toBeNull();
+    });
+  });
+
+  describe('is_admin round-trip', () => {
+    it('should persist a non-admin member with isAdmin false', () => {
+      // Arrange
+      const member = createDomainMember();
+
+      // Act
+      const entity = mapper.toPersistence(member);
+
+      // Assert
+      expect(entity.isAdmin).toBe(false);
+    });
+
+    it('should persist an admin member with isAdmin true', () => {
+      // Arrange
+      const member = createDomainMember();
+      member.promoteToAdmin('actor-1');
+
+      // Act
+      const entity = mapper.toPersistence(member);
+
+      // Assert
+      expect(entity.isAdmin).toBe(true);
+    });
+
+    it('should read the admin flag back into the aggregate', () => {
+      // Arrange
+      const entity = createEntity();
+      entity.isAdmin = true;
+
+      // Act
+      const member = mapper.toDomain(entity);
+
+      // Assert
+      expect(member.isAdmin).toBe(true);
+    });
+
+    it('should treat a missing is_admin column value as non-admin', () => {
+      // Arrange
+      const entity = createEntity();
+      entity.isAdmin = undefined as unknown as boolean;
+
+      // Act
+      const member = mapper.toDomain(entity);
+
+      // Assert
+      expect(member.isAdmin).toBe(false);
     });
   });
 });

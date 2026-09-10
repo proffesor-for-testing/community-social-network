@@ -17,6 +17,7 @@ export class FollowMemberHandler {
     private readonly connectionRepo: IConnectionRepository,
     @Inject('IBlockRepository')
     private readonly blockRepo: IBlockRepository,
+    @Inject(AlertCreatorService)
     private readonly alerts: AlertCreatorService,
   ) {}
 

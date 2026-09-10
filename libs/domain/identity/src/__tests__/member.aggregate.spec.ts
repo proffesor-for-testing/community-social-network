@@ -6,6 +6,8 @@ import { MemberRegisteredEvent } from '../events/member-registered.event';
 import { MemberAuthenticationSucceededEvent } from '../events/member-authentication-succeeded.event';
 import { MemberLockedEvent } from '../events/member-locked.event';
 import { MemberSuspendedEvent } from '../events/member-suspended.event';
+import { MemberPromotedToAdminEvent } from '../events/member-promoted-to-admin.event';
+import { MemberDemotedFromAdminEvent } from '../events/member-demoted-from-admin.event';
 import {
   Email,
   ValidationError,
@@ -299,6 +301,171 @@ describe('Member Aggregate', () => {
     });
   });
 
+  describe('promoteToAdmin', () => {
+    it('should default a newly registered member to non-admin', () => {
+      // Arrange & Act
+      const member = createTestMember();
+
+      // Assert
+      expect(member.isAdmin).toBe(false);
+    });
+
+    it('should mark the member as admin', () => {
+      // Arrange
+      const member = createTestMember();
+
+      // Act
+      member.promoteToAdmin('actor-1');
+
+      // Assert
+      expect(member.isAdmin).toBe(true);
+    });
+
+    it('should emit a MemberPromotedToAdmin event', () => {
+      // Arrange
+      const member = createTestMember();
+
+      // Act
+      member.promoteToAdmin('actor-1');
+
+      // Assert
+      expect(member.pullDomainEvents()[0]).toBeInstanceOf(
+        MemberPromotedToAdminEvent,
+      );
+    });
+
+    it('should record who performed the promotion', () => {
+      // Arrange
+      const member = createTestMember();
+
+      // Act
+      member.promoteToAdmin('actor-1');
+
+      // Assert
+      const event = member.pullDomainEvents()[0] as MemberPromotedToAdminEvent;
+      expect(event.promotedBy).toBe('actor-1');
+    });
+
+    it('should attribute the promotion to the system when no actor is given', () => {
+      // Arrange
+      const member = createTestMember();
+
+      // Act
+      member.promoteToAdmin();
+
+      // Assert
+      const event = member.pullDomainEvents()[0] as MemberPromotedToAdminEvent;
+      expect(event.promotedBy).toBe('system');
+    });
+
+    it('should emit no event when the member is already an admin', () => {
+      // Arrange
+      const member = createTestMember();
+      member.promoteToAdmin('actor-1');
+      member.pullDomainEvents();
+
+      // Act
+      member.promoteToAdmin('actor-2');
+
+      // Assert
+      expect(member.pullDomainEvents()).toHaveLength(0);
+    });
+
+    it('should not bump the version when the member is already an admin', () => {
+      // Arrange
+      const member = createTestMember();
+      member.promoteToAdmin('actor-1');
+      const versionAfterFirstPromotion = member.version;
+
+      // Act
+      member.promoteToAdmin('actor-2');
+
+      // Assert
+      expect(member.version).toBe(versionAfterFirstPromotion);
+    });
+  });
+
+  describe('demoteFromAdmin', () => {
+    it('should clear the admin flag', () => {
+      // Arrange
+      const member = createTestMember();
+      member.promoteToAdmin('actor-1');
+
+      // Act
+      member.demoteFromAdmin('actor-1');
+
+      // Assert
+      expect(member.isAdmin).toBe(false);
+    });
+
+    it('should emit a MemberDemotedFromAdmin event', () => {
+      // Arrange
+      const member = createTestMember();
+      member.promoteToAdmin('actor-1');
+      member.pullDomainEvents();
+
+      // Act
+      member.demoteFromAdmin('actor-1');
+
+      // Assert
+      expect(member.pullDomainEvents()[0]).toBeInstanceOf(
+        MemberDemotedFromAdminEvent,
+      );
+    });
+
+    it('should record who performed the demotion', () => {
+      // Arrange
+      const member = createTestMember();
+      member.promoteToAdmin('actor-1');
+      member.pullDomainEvents();
+
+      // Act
+      member.demoteFromAdmin('actor-1');
+
+      // Assert
+      const event = member.pullDomainEvents()[0] as MemberDemotedFromAdminEvent;
+      expect(event.demotedBy).toBe('actor-1');
+    });
+
+    it('should reject an admin demoting themselves', () => {
+      // Arrange
+      const member = createTestMember();
+      member.promoteToAdmin('actor-1');
+
+      // Act & Assert
+      expect(() => member.demoteFromAdmin(member.id.value)).toThrow(
+        ValidationError,
+      );
+    });
+
+    it('should leave the admin flag intact when self-demotion is rejected', () => {
+      // Arrange
+      const member = createTestMember();
+      member.promoteToAdmin('actor-1');
+
+      // Act
+      try {
+        member.demoteFromAdmin(member.id.value);
+      } catch {
+        // expected
+      }
+
+      // Assert
+      expect(member.isAdmin).toBe(true);
+    });
+
+    it('should emit no event when the member is not an admin', () => {
+      // Arrange
+      const member = createTestMember();
+
+      // Act
+      member.demoteFromAdmin('actor-1');
+
+      // Assert
+      expect(member.pullDomainEvents()).toHaveLength(0);
+    });
+  });
+
   describe('reconstitute', () => {
     it('should recreate a member from persistence data without events', () => {
       const id = MemberId.generate();
@@ -319,6 +486,43 @@ describe('Member Aggregate', () => {
       // No events should have been emitted
       const events = member.pullDomainEvents();
       expect(events).toHaveLength(0);
+    });
+
+    it('should default isAdmin to false when the flag is omitted', () => {
+      // Arrange & Act
+      const member = Member.reconstitute(
+        MemberId.generate(),
+        Email.create('stored@example.com'),
+        Credential.create('$2b$10$storedhash'),
+        { value: 'ACTIVE' } as any,
+        'Stored User',
+        0,
+        null,
+        { value: new Date() } as any,
+        5,
+      );
+
+      // Assert
+      expect(member.isAdmin).toBe(false);
+    });
+
+    it('should restore a persisted admin flag without emitting events', () => {
+      // Arrange & Act
+      const member = Member.reconstitute(
+        MemberId.generate(),
+        Email.create('stored-admin@example.com'),
+        Credential.create('$2b$10$storedhash'),
+        { value: 'ACTIVE' } as any,
+        'Stored Admin',
+        0,
+        null,
+        { value: new Date() } as any,
+        5,
+        true,
+      );
+
+      // Assert
+      expect(member.isAdmin).toBe(true);
     });
   });
 

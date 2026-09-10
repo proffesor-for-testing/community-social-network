@@ -38,7 +38,7 @@ export class AdminAuthGuard implements CanActivate {
       throw new UnauthorizedException('Not an admin token');
     }
 
-    (request as Record<string, unknown>)['adminUser'] = {
+    (request as unknown as Record<string, unknown>)['adminUser'] = {
       id: payload.userId,
       email: payload.email,
       role: 'admin',

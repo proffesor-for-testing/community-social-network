@@ -4,7 +4,11 @@ import { Badge } from '../../../shared/components/atoms/Badge';
 import { Button } from '../../../shared/components/atoms/Button';
 import { Spinner } from '../../../shared/components/atoms/Spinner';
 import { SearchBar } from '../../../shared/components/molecules/SearchBar';
-import { useAdminUsers, useSuspendUser } from '../hooks/useUserManagement';
+import {
+  useAdminUsers,
+  useSuspendUser,
+  usePromoteUser,
+} from '../hooks/useUserManagement';
 
 export function UserManagement() {
   const [page, setPage] = useState(1);
@@ -13,6 +17,7 @@ export function UserManagement() {
 
   const { data, isLoading, isError } = useAdminUsers(page, searchQuery || undefined);
   const suspendMutation = useSuspendUser();
+  const promoteMutation = usePromoteUser();
 
   const handleSearch = (value: string) => {
     setSearchQuery(value);
@@ -81,6 +86,11 @@ export function UserManagement() {
                   </div>
 
                   <div className="flex items-center gap-3">
+                    {user.isAdmin && (
+                      <Badge variant="warning" size="sm">
+                        Admin
+                      </Badge>
+                    )}
                     <Badge
                       variant={roleBadgeVariant[user.role] ?? 'default'}
                       size="sm"
@@ -110,6 +120,32 @@ export function UserManagement() {
                     >
                       Unsuspend
                     </Button>
+                    {user.isAdmin ? (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() =>
+                          promoteMutation.mutate({
+                            userId: user.id,
+                            demote: true,
+                          })
+                        }
+                        loading={promoteMutation.isPending}
+                      >
+                        Demote
+                      </Button>
+                    ) : (
+                      <Button
+                        variant="secondary"
+                        size="sm"
+                        onClick={() =>
+                          promoteMutation.mutate({ userId: user.id })
+                        }
+                        loading={promoteMutation.isPending}
+                      >
+                        Promote
+                      </Button>
+                    )}
                   </div>
                 </div>
               ))

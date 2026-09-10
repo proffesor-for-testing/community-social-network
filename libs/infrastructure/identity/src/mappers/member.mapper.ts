@@ -20,6 +20,7 @@ export class MemberMapper implements AggregateMapper<Member, MemberEntity> {
       raw.lastLoginAt ? Timestamp.fromDate(raw.lastLoginAt) : null,
       Timestamp.fromDate(raw.createdAt),
       raw.version,
+      raw.isAdmin ?? false,
     );
   }
 
@@ -35,6 +36,7 @@ export class MemberMapper implements AggregateMapper<Member, MemberEntity> {
       ? domain.lastLoginAt.value
       : null;
     entity.createdAt = domain.createdAt.value;
+    entity.isAdmin = domain.isAdmin;
     entity.version = domain.version;
     return entity;
   }

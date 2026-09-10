@@ -12,6 +12,8 @@ import { MemberRegisteredEvent } from '../events/member-registered.event';
 import { MemberAuthenticationSucceededEvent } from '../events/member-authentication-succeeded.event';
 import { MemberLockedEvent } from '../events/member-locked.event';
 import { MemberSuspendedEvent } from '../events/member-suspended.event';
+import { MemberPromotedToAdminEvent } from '../events/member-promoted-to-admin.event';
+import { MemberDemotedFromAdminEvent } from '../events/member-demoted-from-admin.event';
 
 export class Member extends AggregateRoot<MemberId> {
   private _email: Email;
@@ -21,6 +23,7 @@ export class Member extends AggregateRoot<MemberId> {
   private _failedLoginAttempts: number;
   private _lastLoginAt: Timestamp | null;
   private _createdAt: Timestamp;
+  private _isAdmin: boolean;
 
   private constructor(
     id: MemberId,
@@ -31,6 +34,7 @@ export class Member extends AggregateRoot<MemberId> {
     failedLoginAttempts: number,
     lastLoginAt: Timestamp | null,
     createdAt: Timestamp,
+    isAdmin: boolean,
   ) {
     super(id);
     this._email = email;
@@ -40,6 +44,7 @@ export class Member extends AggregateRoot<MemberId> {
     this._failedLoginAttempts = failedLoginAttempts;
     this._lastLoginAt = lastLoginAt;
     this._createdAt = createdAt;
+    this._isAdmin = isAdmin;
   }
 
   public static register(
@@ -57,6 +62,7 @@ export class Member extends AggregateRoot<MemberId> {
       0,
       null,
       Timestamp.now(),
+      false,
     );
 
     member.addDomainEvent(
@@ -80,6 +86,7 @@ export class Member extends AggregateRoot<MemberId> {
     lastLoginAt: Timestamp | null,
     createdAt: Timestamp,
     version: number,
+    isAdmin = false,
   ): Member {
     const member = new Member(
       id,
@@ -90,6 +97,7 @@ export class Member extends AggregateRoot<MemberId> {
       failedLoginAttempts,
       lastLoginAt,
       createdAt,
+      isAdmin,
     );
     member.setVersion(version);
     return member;
@@ -123,6 +131,10 @@ export class Member extends AggregateRoot<MemberId> {
 
   public get createdAt(): Timestamp {
     return this._createdAt;
+  }
+
+  public get isAdmin(): boolean {
+    return this._isAdmin;
   }
 
   // --- Behavior ---
@@ -173,6 +185,39 @@ export class Member extends AggregateRoot<MemberId> {
     this.assertTransitionAllowed(MemberStatus.active());
     this._status = MemberStatus.active();
     this._failedLoginAttempts = 0;
+    this.incrementVersion();
+  }
+
+  /**
+   * Grant admin privileges. Idempotent: promoting an existing admin is a
+   * no-op and emits no event.
+   */
+  public promoteToAdmin(promotedBy = 'system'): void {
+    if (this._isAdmin) {
+      return;
+    }
+    this._isAdmin = true;
+    this.addDomainEvent(
+      new MemberPromotedToAdminEvent(this.id.value, promotedBy),
+    );
+    this.incrementVersion();
+  }
+
+  /**
+   * Revoke admin privileges. Idempotent: demoting a non-admin is a no-op.
+   * An admin may never demote themselves.
+   */
+  public demoteFromAdmin(demotedBy = 'system'): void {
+    if (demotedBy === this.id.value) {
+      throw new ValidationError('An admin cannot demote themselves');
+    }
+    if (!this._isAdmin) {
+      return;
+    }
+    this._isAdmin = false;
+    this.addDomainEvent(
+      new MemberDemotedFromAdminEvent(this.id.value, demotedBy),
+    );
     this.incrementVersion();
   }
 

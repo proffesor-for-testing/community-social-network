@@ -13,6 +13,15 @@ export interface IConnectionRepository
 
   findFollowing(userId: UserId): Promise<Connection[]>;
 
+  /**
+   * Ids of every member `userId` follows with an ACCEPTED connection.
+   *
+   * Exists as a dedicated projection because the feed only needs the followee
+   * identities: loading full Connection aggregates just to map them would pull
+   * the whole following list into memory on every feed page.
+   */
+  findAcceptedFolloweeIds(userId: UserId): Promise<UserId[]>;
+
   countFollowers(userId: UserId): Promise<number>;
 
   countFollowing(userId: UserId): Promise<number>;

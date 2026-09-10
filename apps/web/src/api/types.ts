@@ -45,6 +45,8 @@ export interface CurrentUserDto {
   displayName: string;
   role: 'member' | 'moderator' | 'admin';
   createdAt: string;
+  /** Present on the admin users list: whether the member holds admin rights. */
+  isAdmin?: boolean;
 }
 
 export interface SessionDto {
@@ -88,6 +90,8 @@ export interface PublicationDto {
   type: 'post' | 'article';
   status: 'draft' | 'published' | 'archived';
   tags: string[];
+  /** Group this post belongs to, or null for a main-feed post. */
+  groupId: string | null;
   reactionCount: number;
   commentCount: number;
   /** The viewer's own reaction on this post, if any. */
@@ -205,4 +209,24 @@ export interface AuditEntryDto {
   targetId: string;
   metadata: Record<string, unknown>;
   timestamp: string;
+}
+
+// ── Direct Messages ──────────────────────────────────────────────
+
+export interface DirectMessageDto {
+  id: string;
+  conversationId: string;
+  senderId: string;
+  content: string;
+  createdAt: string;
+  readAt: string | null;
+}
+
+export interface ConversationDto {
+  id: string;
+  otherMemberId: string;
+  otherDisplayName: string;
+  lastMessage: DirectMessageDto | null;
+  unreadCount: number;
+  updatedAt: string;
 }

@@ -20,6 +20,13 @@ export class PostResponseDto {
   @ApiProperty({ description: 'Post visibility', example: 'PUBLIC' })
   visibility!: string;
 
+  @ApiPropertyOptional({
+    description: 'Group this post belongs to, or null for a main-feed post',
+    example: 'c3d4e5f6-a7b8-9012-cdef-123456789012',
+    nullable: true,
+  })
+  groupId!: string | null;
+
   @ApiProperty({ description: 'Post status', example: 'PUBLISHED' })
   status!: string;
 
@@ -59,6 +66,7 @@ export class PostResponseDto {
     dto.content = publication.content.text;
     dto.visibility = publication.visibility.value;
     dto.status = publication.status.value;
+    dto.groupId = publication.groupId?.value ?? null;
 
     const counts: Record<string, number> = {};
     for (const [key, value] of publication.reactionCounts) {

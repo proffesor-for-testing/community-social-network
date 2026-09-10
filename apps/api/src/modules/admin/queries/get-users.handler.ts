@@ -38,6 +38,7 @@ export class GetUsersHandler {
         ? entity.lastLoginAt.toISOString()
         : null;
       dto.createdAt = entity.createdAt.toISOString();
+      dto.isAdmin = entity.isAdmin ?? false;
       return dto;
     });
 

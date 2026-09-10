@@ -3,7 +3,10 @@ import { UserId } from '@csn/domain-shared';
 import {
   Publication,
   PublicationId,
+  GroupId,
   IPublicationRepository,
+  FeedPageOptions,
+  FeedCursorPosition,
 } from '@csn/domain-content';
 import { OptimisticLockError } from '@csn/infra-shared';
 import { PublicationMapper } from '../mappers/publication.mapper';
@@ -82,7 +85,12 @@ export class InMemoryPublicationRepository implements IPublicationRepository {
   async findAllPublished(): Promise<Publication[]> {
     const results: Publication[] = [];
     for (const [pubId, entity] of this.store.entries()) {
-      if (entity.status === 'PUBLISHED' && entity.visibility === 'PUBLIC') {
+      if (
+        entity.status === 'PUBLISHED' &&
+        entity.visibility === 'PUBLIC' &&
+        // Group posts stay inside their group and never surface on Explore.
+        !entity.groupId
+      ) {
         results.push(
           this.mapper.toDomain({
             publication: entity,
@@ -97,6 +105,60 @@ export class InMemoryPublicationRepository implements IPublicationRepository {
     );
   }
 
+  async findFeedForAuthors(
+    authorIds: UserId[],
+    options: FeedPageOptions,
+  ): Promise<Publication[]> {
+    if (authorIds.length === 0) {
+      return [];
+    }
+    const allowedAuthors = new Set(authorIds.map((id) => id.value));
+    return this.paginate(
+      (entity) =>
+        entity.status === 'PUBLISHED' &&
+        !entity.groupId &&
+        allowedAuthors.has(entity.authorId),
+      options,
+    );
+  }
+
+  async findByGroupId(
+    groupId: GroupId,
+    options: FeedPageOptions,
+  ): Promise<Publication[]> {
+    return this.paginate(
+      (entity) =>
+        entity.status === 'PUBLISHED' && entity.groupId === groupId.value,
+      options,
+    );
+  }
+
+  /**
+   * Shared keyset pagination over the in-memory store, mirroring the Postgres
+   * ordering: (createdAt DESC, id DESC) with a strictly-after cursor.
+   */
+  private paginate(
+    predicate: (entity: PublicationEntity) => boolean,
+    options: FeedPageOptions,
+  ): Publication[] {
+    const matching = Array.from(this.store.values())
+      .filter(predicate)
+      .sort(compareNewestFirst);
+
+    const start = cursorOffset(matching, options.cursor ?? null);
+    return matching
+      .slice(start, start + options.limit)
+      .map((entity) => this.toDomain(entity));
+  }
+
+  private toDomain(entity: PublicationEntity): Publication {
+    return this.mapper.toDomain({
+      publication: entity,
+      mentions: this.mentionStore.get(entity.id) ?? [],
+      reactions: this.reactionStore.get(entity.id) ?? [],
+    });
+  }
+
   /** Test helper: clear all data */
   clear(): void {
     this.store.clear();
@@ -108,4 +170,36 @@ export class InMemoryPublicationRepository implements IPublicationRepository {
   get size(): number {
     return this.store.size;
   }
+}
+
+/** Newest first, id descending as the tiebreaker — matches the SQL ORDER BY. */
+function compareNewestFirst(a: PublicationEntity, b: PublicationEntity): number {
+  const byTime = b.createdAt.getTime() - a.createdAt.getTime();
+  if (byTime !== 0) {
+    return byTime;
+  }
+  return a.id < b.id ? 1 : a.id > b.id ? -1 : 0;
+}
+
+/**
+ * Index of the first row strictly after the cursor position. Rows sharing the
+ * cursor's timestamp are only skipped when their id sorts at or above it, so a
+ * page boundary inside a same-millisecond run neither drops nor repeats a post.
+ */
+function cursorOffset(
+  ordered: PublicationEntity[],
+  cursor: FeedCursorPosition | null,
+): number {
+  if (!cursor) {
+    return 0;
+  }
+  const cursorTime = cursor.createdAt.getTime();
+  const index = ordered.findIndex((entity) => {
+    const time = entity.createdAt.getTime();
+    if (time !== cursorTime) {
+      return time < cursorTime;
+    }
+    return entity.id < cursor.id;
+  });
+  return index === -1 ? ordered.length : index;
 }

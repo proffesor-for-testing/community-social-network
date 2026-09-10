@@ -6,11 +6,15 @@ import { Spinner } from '../../../shared/components/atoms/Spinner';
 import { useGroup } from '../hooks/useGroup';
 import { useJoinGroup } from '../hooks/useJoinGroup';
 import { MemberList } from './MemberList';
+import { GroupFeed } from './GroupFeed';
+import { GroupPostComposer } from './GroupPostComposer';
+import { useIsGroupMember } from '../hooks/useIsGroupMember';
 
 export function GroupDetail() {
   const { groupId } = useParams<{ groupId: string }>();
   const { data: group, isLoading, isError } = useGroup(groupId!);
   const joinMutation = useJoinGroup();
+  const { isMember } = useIsGroupMember(groupId!);
 
   if (isLoading) {
     return (
@@ -93,6 +97,15 @@ export function GroupDetail() {
         <p className="text-xs text-gray-500 dark:text-gray-400">
           Created {new Date(group.createdAt).toLocaleDateString()}
         </p>
+      </div>
+
+      {/* Group posts (members only) */}
+      <div className="space-y-4">
+        <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
+          Posts
+        </h2>
+        {isMember && <GroupPostComposer groupId={group.id} />}
+        <GroupFeed groupId={group.id} enabled={isMember} />
       </div>
 
       {/* Members */}

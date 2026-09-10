@@ -23,3 +23,4 @@ export {
 
 // Migrations
 export { CreateIdentityTables1710000000000 } from './migrations/1710000000000-create-identity-tables';
+export { AddMemberIsAdmin1710000009000 } from './migrations/1710000009000-add-member-is-admin';

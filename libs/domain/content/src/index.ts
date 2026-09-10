@@ -14,6 +14,8 @@ export {
   DiscussionStatusEnum,
 } from './value-objects/discussion-status';
 export { Mention } from './value-objects/mention';
+export { GroupId } from './value-objects/group-id';
+export { FeedCursor, FeedCursorPosition } from './value-objects/feed-cursor';
 
 // Aggregates
 export { Publication } from './aggregates/publication';
@@ -28,7 +30,10 @@ export { MemberMentionedEvent } from './events/member-mentioned.event';
 export { ReactionAddedEvent } from './events/reaction-added.event';
 
 // Repositories
-export { IPublicationRepository } from './repositories/publication.repository';
+export {
+  IPublicationRepository,
+  FeedPageOptions,
+} from './repositories/publication.repository';
 export { IDiscussionRepository } from './repositories/discussion.repository';
 
 // Errors

@@ -17,6 +17,8 @@ import { Verify2faHandler } from './commands/verify-2fa.handler';
 import { SuspendUserHandler } from './commands/suspend-user.handler';
 import { UnsuspendUserHandler } from './commands/unsuspend-user.handler';
 import { Setup2faHandler } from './commands/setup-2fa.handler';
+import { PromoteUserHandler } from './commands/promote-user.handler';
+import { DemoteUserHandler } from './commands/demote-user.handler';
 
 // Query Handlers
 import { GetUsersHandler } from './queries/get-users.handler';
@@ -53,6 +55,8 @@ import { AdminAuthGuard } from './guards/admin-auth.guard';
     SuspendUserHandler,
     UnsuspendUserHandler,
     Setup2faHandler,
+    PromoteUserHandler,
+    DemoteUserHandler,
     // Query Handlers
     GetUsersHandler,
     GetAuditLogHandler,

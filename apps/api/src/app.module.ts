@@ -16,6 +16,7 @@ import { ContentInfrastructureModule } from '@csn/infra-content';
 import { SocialGraphInfrastructureModule } from '@csn/infra-social-graph';
 import { CommunityInfrastructureModule } from '@csn/infra-community';
 import { NotificationInfrastructureModule } from '@csn/infra-notification';
+import { DirectMessagesInfrastructureModule } from '@csn/infra-direct-messages';
 import { AdminInfrastructureModule } from '@csn/infra-admin';
 
 // Application-layer context modules
@@ -25,6 +26,7 @@ import { ContentModule } from './modules/content/content.module';
 import { SocialGraphModule } from './modules/social-graph/social-graph.module';
 import { CommunityModule } from './modules/community/community.module';
 import { NotificationModule } from './modules/notification/notification.module';
+import { DirectMessagesModule } from './modules/direct-messages/direct-messages.module';
 import { AdminModule } from './modules/admin/admin.module';
 import { PrivacyModule } from './modules/privacy/privacy.module';
 import { UploadModule } from './modules/upload/upload.module';
@@ -62,6 +64,7 @@ import { BlockContentFilterConsumer } from './consumers/block-content-filter.con
     SocialGraphInfrastructureModule,
     CommunityInfrastructureModule,
     NotificationInfrastructureModule,
+    DirectMessagesInfrastructureModule,
     AdminInfrastructureModule,
 
     // Application-layer context modules (use cases, controllers, DTOs)
@@ -71,6 +74,7 @@ import { BlockContentFilterConsumer } from './consumers/block-content-filter.con
     SocialGraphModule,
     CommunityModule,
     NotificationModule,
+    DirectMessagesModule,
     AdminModule,
     PrivacyModule,
     UploadModule,

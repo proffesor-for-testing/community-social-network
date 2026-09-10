@@ -19,6 +19,10 @@ import { CqrsModule, CommandBus, QueryBus } from '@nestjs/cqrs';
 // ── Content handlers ────────────────────────────────────────────────────────
 
 import { CreatePostHandler } from '../../../apps/api/src/modules/content/commands/create-post.handler';
+import { GetFeedHandler } from '../../../apps/api/src/modules/content/queries/get-feed.handler';
+import { GetFeedQuery } from '../../../apps/api/src/modules/content/queries/get-feed.query';
+import { ApproveFollowHandler } from '../../../apps/api/src/modules/social-graph/commands/approve-follow.handler';
+import { ApproveFollowCommand } from '../../../apps/api/src/modules/social-graph/commands/approve-follow.command';
 import { CreatePostCommand } from '../../../apps/api/src/modules/content/commands/create-post.command';
 import { GetPostHandler } from '../../../apps/api/src/modules/content/queries/get-post.handler';
 import { GetPostQuery } from '../../../apps/api/src/modules/content/queries/get-post.query';
@@ -43,6 +47,7 @@ import {
   PUBLICATION_REPOSITORY_TOKEN,
   DISCUSSION_REPOSITORY_TOKEN,
   PROFILE_REPOSITORY_TOKEN,
+  CONNECTION_REPOSITORY_TOKEN,
 } from '../../setup/test-app';
 import { VisibilityEnum } from '@csn/domain-content';
 import { UserId } from '@csn/domain-shared';
@@ -70,9 +75,11 @@ describe('Cross-Context: Block Filters Content', () => {
       providers: [
         CreatePostHandler,
         GetPostHandler,
+        GetFeedHandler,
         { provide: PUBLICATION_REPOSITORY_TOKEN, useValue: repos.publicationRepo },
         { provide: DISCUSSION_REPOSITORY_TOKEN, useValue: repos.discussionRepo },
         { provide: PROFILE_REPOSITORY_TOKEN, useValue: repos.profileRepo },
+        { provide: CONNECTION_REPOSITORY_TOKEN, useValue: repos.connectionRepo },
       ],
     }).compile();
 
@@ -196,6 +203,29 @@ describe('Cross-Context: Block Filters Content', () => {
       UserId.create(userA),
     );
     expect(connection).toBeNull();
+  });
+
+  // ── Blocking drops the author out of the follower feed ────────────────
+
+  it('should drop a blocked author posts from the blocker feed', async () => {
+    // Arrange — User B follows User A, approves it, and A publishes
+    const approveHandler = new ApproveFollowHandler(repos.connectionRepo, {
+      create: async () => undefined,
+    } as never);
+    const connection = await followHandler.execute(
+      new FollowMemberCommand(userB, userA),
+    );
+    await approveHandler.execute(new ApproveFollowCommand(connection.id, userA));
+    await commandBus.execute(
+      new CreatePostCommand(userA, 'Post from a soon-to-be-blocked author.', VisibilityEnum.PUBLIC),
+    );
+
+    // Act — blocking removes the connection, so the feed loses the author
+    await blockHandler.execute(new BlockMemberCommand(userB, userA));
+    const feed = await queryBus.execute(new GetFeedQuery(userB));
+
+    // Assert
+    expect(feed.items).toEqual([]);
   });
 
   // ── Full cross-context flow ───────────────────────────────────────────

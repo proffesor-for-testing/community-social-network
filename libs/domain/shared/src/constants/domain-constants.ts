@@ -17,6 +17,7 @@ export const SOCIAL_LIMITS = {
 
 export const MEDIA_LIMITS = {
   MAX_FILE_SIZE_BYTES: 10 * 1024 * 1024,
+  MAX_AVATAR_SIZE: 5 * 1024 * 1024,
 } as const;
 
 export const SECURITY_LIMITS = {

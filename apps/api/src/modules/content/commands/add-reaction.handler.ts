@@ -20,6 +20,7 @@ export class AddReactionHandler implements ICommandHandler<AddReactionCommand, v
     private readonly publicationRepository: IPublicationRepository,
     @InjectRepository(ReactionEntity)
     private readonly reactionRepository: Repository<ReactionEntity>,
+    @Inject(AlertCreatorService)
     private readonly alerts: AlertCreatorService,
   ) {}
 

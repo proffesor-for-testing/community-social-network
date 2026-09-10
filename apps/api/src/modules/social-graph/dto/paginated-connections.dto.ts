@@ -1,9 +1,9 @@
 import { ConnectionResponseDto } from './connection-response.dto';
 
 export class PaginatedConnectionsDto {
-  items: ConnectionResponseDto[];
-  total: number;
-  cursor: string | null;
+  items!: ConnectionResponseDto[];
+  total!: number;
+  cursor!: string | null;
 
   public static create(
     items: ConnectionResponseDto[],

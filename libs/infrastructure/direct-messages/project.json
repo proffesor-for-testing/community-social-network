@@ -1,0 +1,30 @@
+{
+  "name": "infra-direct-messages",
+  "$schema": "../../../node_modules/nx/schemas/project-schema.json",
+  "sourceRoot": "libs/infrastructure/direct-messages/src",
+  "projectType": "library",
+  "tags": ["scope:direct-messages", "type:infrastructure"],
+  "targets": {
+    "build": {
+      "executor": "@nx/js:tsc",
+      "outputs": ["{options.outputPath}"],
+      "options": {
+        "outputPath": "dist/libs/infrastructure/direct-messages",
+        "tsConfig": "libs/infrastructure/direct-messages/tsconfig.lib.json",
+        "main": "libs/infrastructure/direct-messages/src/index.ts"
+      }
+    },
+    "lint": {
+      "executor": "@nx/eslint:lint",
+      "options": {
+        "lintFilePatterns": ["libs/infrastructure/direct-messages/src/**/*.ts"]
+      }
+    },
+    "test": {
+      "executor": "@nx/vite:test",
+      "options": {
+        "config": "vitest.config.ts"
+      }
+    }
+  }
+}

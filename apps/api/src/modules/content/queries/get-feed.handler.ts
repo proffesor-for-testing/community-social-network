@@ -3,12 +3,15 @@ import { Inject, Optional } from '@nestjs/common';
 import {
   IPublicationRepository,
   IDiscussionRepository,
+  FeedCursor,
 } from '@csn/domain-content';
 import { IProfileRepository } from '@csn/domain-profile';
+import { IConnectionRepository } from '@csn/domain-social-graph';
 import { UserId } from '@csn/domain-shared';
 import { GetFeedQuery } from './get-feed.query';
 import { PostResponseDto } from '../dto/post-response.dto';
 import { ViewerReactionService } from '../services/viewer-reaction.service';
+import { enrichPublications } from './enrich-publications';
 
 export class FeedResult {
   constructor(
@@ -18,6 +21,11 @@ export class FeedResult {
   ) {}
 }
 
+/**
+ * The viewer's personal feed: their own posts plus posts by everyone they
+ * follow with an ACCEPTED connection. Group posts are excluded — they live
+ * behind the group's own feed.
+ */
 @QueryHandler(GetFeedQuery)
 export class GetFeedHandler implements IQueryHandler<GetFeedQuery, FeedResult> {
   constructor(
@@ -29,72 +37,60 @@ export class GetFeedHandler implements IQueryHandler<GetFeedQuery, FeedResult> {
     private readonly discussionRepository: IDiscussionRepository,
     @Optional()
     private readonly viewerReactions?: ViewerReactionService,
+    // Declared optional only because TypeScript forbids a required parameter
+    // after an optional one; DI always supplies it via the explicit token.
+    @Inject('IConnectionRepository')
+    private readonly connectionRepository?: IConnectionRepository,
   ) {}
 
   async execute(query: GetFeedQuery): Promise<FeedResult> {
-    // Until follower-based feeds are wired up, return all PUBLIC + PUBLISHED posts.
-    const allPosts = await this.publicationRepository.findAllPublished();
-
-    let filtered = allPosts;
-    if (query.cursor) {
-      const cursorIndex = filtered.findIndex((p) => p.id.value === query.cursor);
-      if (cursorIndex >= 0) {
-        filtered = filtered.slice(cursorIndex + 1);
-      }
+    if (!this.connectionRepository) {
+      throw new Error(
+        'GetFeedHandler requires an IConnectionRepository to resolve followees',
+      );
     }
 
+    const viewerId = UserId.create(query.userId);
+    const followeeIds =
+      await this.connectionRepository.findAcceptedFolloweeIds(viewerId);
+
+    // The viewer always sees their own posts, even with an empty following list.
+    const authorIds = dedupeUserIds([viewerId, ...followeeIds]);
+
     const requestedLimit = query.limit;
-    const pageItems = filtered.slice(0, requestedLimit + 1);
-    const hasMore = pageItems.length > requestedLimit;
-    const resultItems = hasMore ? pageItems.slice(0, requestedLimit) : pageItems;
-
-    // Batch-fetch author profiles in a single round-trip so authorName /
-    // authorAvatarUrl land on the DTO without N+1 queries.
-    const uniqueAuthorIds = Array.from(
-      new Set(resultItems.map((p) => p.authorId.value)),
-    ).map((id) => UserId.create(id));
-    const profileByMemberId =
-      uniqueAuthorIds.length > 0
-        ? await this.profileRepository.findByMemberIds(uniqueAuthorIds)
-        : new Map();
-
-    // Batch-count active comments per post (one GROUP BY query, no N+1).
-    const commentCountByPostId =
-      resultItems.length > 0
-        ? await this.discussionRepository.countActiveByPublicationIds(
-            resultItems.map((p) => p.id),
-          )
-        : new Map<string, number>();
-
-    // Batch-fetch the viewer's own reactions so the FE can render toggle state.
-    const viewerReactionByPostId = this.viewerReactions
-      ? await this.viewerReactions.findByViewer(
-          resultItems.map((p) => p.id.value),
-          query.userId,
-        )
-      : new Map<string, string>();
-
-    const items = resultItems.map((pub) => {
-      const profile = profileByMemberId.get(pub.authorId.value);
-      const author = profile
-        ? {
-            displayName: profile.displayName.value,
-            avatarUrl: null, // Avatar URLs not yet served; placeholder for parity.
-          }
-        : undefined;
-      return PostResponseDto.fromDomain(
-        pub,
-        commentCountByPostId.get(pub.id.value) ?? 0,
-        author,
-        viewerReactionByPostId.get(pub.id.value) ?? null,
-      );
+    // Fetch one extra row to detect a further page without a second count query.
+    const rows = await this.publicationRepository.findFeedForAuthors(authorIds, {
+      cursor: FeedCursor.decode(query.cursor),
+      limit: requestedLimit + 1,
     });
 
+    const hasMore = rows.length > requestedLimit;
+    const resultItems = hasMore ? rows.slice(0, requestedLimit) : rows;
+
+    const items = await enrichPublications(resultItems, query.userId, {
+      profileRepository: this.profileRepository,
+      discussionRepository: this.discussionRepository,
+      viewerReactions: this.viewerReactions,
+    });
+
+    const last = resultItems[resultItems.length - 1];
     const nextCursor =
-      hasMore && resultItems.length > 0
-        ? resultItems[resultItems.length - 1].id.value
+      hasMore && last
+        ? FeedCursor.encode({ createdAt: last.createdAt.value, id: last.id.value })
         : null;
 
     return new FeedResult(items, nextCursor, hasMore);
   }
+}
+
+function dedupeUserIds(ids: UserId[]): UserId[] {
+  const seen = new Set<string>();
+  const unique: UserId[] = [];
+  for (const id of ids) {
+    if (!seen.has(id.value)) {
+      seen.add(id.value);
+      unique.push(id);
+    }
+  }
+  return unique;
 }

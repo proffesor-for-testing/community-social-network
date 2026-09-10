@@ -14,6 +14,8 @@ export { MemberRegisteredEvent } from './events/member-registered.event';
 export { MemberAuthenticationSucceededEvent } from './events/member-authentication-succeeded.event';
 export { MemberLockedEvent } from './events/member-locked.event';
 export { MemberSuspendedEvent } from './events/member-suspended.event';
+export { MemberPromotedToAdminEvent } from './events/member-promoted-to-admin.event';
+export { MemberDemotedFromAdminEvent } from './events/member-demoted-from-admin.event';
 
 // Repository Interfaces
 export type { IMemberRepository } from './repositories/member.repository';

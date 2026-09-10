@@ -227,3 +227,76 @@ describe('PublicationMapper', () => {
     });
   });
 });
+
+describe('PublicationMapper — group association', () => {
+  const mapper = new PublicationMapper();
+  const groupId = 'c0eebc99-9c0b-4ef8-bb6d-6bb9bd380a33';
+
+  function entityWithGroup(value: string | null): PublicationEntity {
+    const entity = new PublicationEntity();
+    entity.id = 'a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11';
+    entity.authorId = 'b0eebc99-9c0b-4ef8-bb6d-6bb9bd380a22';
+    entity.content = 'Hello world';
+    entity.status = 'PUBLISHED';
+    entity.visibility = 'GROUP_ONLY';
+    entity.groupId = value;
+    entity.createdAt = new Date('2026-01-15T10:00:00Z');
+    entity.updatedAt = new Date('2026-01-15T10:00:00Z');
+    entity.version = 1;
+    return entity;
+  }
+
+  it('should map a persisted group_id onto the aggregate', () => {
+    // Act
+    const domain = mapper.toDomain({
+      publication: entityWithGroup(groupId),
+      mentions: [],
+      reactions: [],
+    });
+
+    // Assert
+    expect(domain.groupId!.value).toBe(groupId);
+  });
+
+  it('should map a null group_id to a personal post', () => {
+    // Act
+    const domain = mapper.toDomain({
+      publication: entityWithGroup(null),
+      mentions: [],
+      reactions: [],
+    });
+
+    // Assert
+    expect(domain.groupId).toBeNull();
+  });
+
+  it('should write the group id back to the entity', () => {
+    // Arrange
+    const domain = mapper.toDomain({
+      publication: entityWithGroup(groupId),
+      mentions: [],
+      reactions: [],
+    });
+
+    // Act
+    const bundle = mapper.toPersistence(domain);
+
+    // Assert
+    expect(bundle.publication.groupId).toBe(groupId);
+  });
+
+  it('should write null for a publication with no group', () => {
+    // Arrange
+    const domain = mapper.toDomain({
+      publication: entityWithGroup(null),
+      mentions: [],
+      reactions: [],
+    });
+
+    // Act
+    const bundle = mapper.toPersistence(domain);
+
+    // Assert
+    expect(bundle.publication.groupId).toBeNull();
+  });
+});

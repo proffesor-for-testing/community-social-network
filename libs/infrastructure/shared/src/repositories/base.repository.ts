@@ -1,4 +1,5 @@
 import { Repository, FindOptionsWhere, ObjectLiteral } from 'typeorm';
+import type { QueryDeepPartialEntity } from 'typeorm/query-builder/QueryPartialEntity';
 import { AggregateRoot } from '@csn/domain-shared';
 import { AggregateMapper } from '../mappers/aggregate-mapper.interface';
 import { OptimisticLockError } from '../errors/optimistic-lock.error';
@@ -55,40 +56,50 @@ export abstract class BaseRepository<
       // Insert: no optimistic lock check needed for first-time persistence.
       // A handler may mutate an aggregate several times before saving, so
       // aggregate.version alone is not a reliable "is new" signal.
+      const insertVersion = Math.max(aggregate.version, 1);
+      (entity as unknown as { version: number }).version = insertVersion;
       await this.ormRepository.save(entity);
-    } else {
-      // Update: use version-conditioned UPDATE for atomic optimistic locking.
-      // Use the loaded entity's version as the guard; a handler may bump
-      // the aggregate version multiple times in a single unit-of-work, so
-      // `aggregate.version - 1` is unreliable.
-      const previousVersion = (existing as unknown as { version: number }).version;
-      const condition = this.idCondition(aggregate.id);
-
-      const qb = this.ormRepository
-        .createQueryBuilder()
-        .update()
-        .set(entity as unknown as Record<string, unknown>);
-
-      // Apply the identity condition from the FindOptionsWhere object
-      const conditionEntries = Object.entries(
-        condition as Record<string, unknown>,
-      );
-      for (const [key, value] of conditionEntries) {
-        qb.andWhere(`"${key}" = :${key}`, { [key]: value });
-      }
-
-      // Add version guard
-      qb.andWhere('"version" = :previousVersion', { previousVersion });
-
-      const result = await qb.execute();
-
-      if (result.affected === 0) {
-        throw new OptimisticLockError(
-          aggregate.constructor.name,
-          String(aggregate.id),
-        );
-      }
+      aggregate.markPersisted(insertVersion);
+      return;
     }
+
+    // Update: version-conditioned UPDATE for atomic optimistic locking.
+    //
+    // The guard MUST be the version this in-memory instance was LOADED at
+    // (aggregate.persistedVersion), never the version currently stored:
+    // reading the stored version right before writing would let a stale
+    // instance silently overwrite a concurrent commit. persistedVersion is
+    // 0 only for legacy rows persisted before version tracking; fall back to
+    // the stored version for those.
+    const loadedVersion = (existing as unknown as { version: number }).version;
+    const previousVersion =
+      aggregate.persistedVersion > 0 ? aggregate.persistedVersion : loadedVersion;
+    // Always advance the stored version, even if the aggregate did not bump
+    // its own, so every successful write invalidates other stale readers.
+    const nextVersion = Math.max(aggregate.version, previousVersion + 1);
+    (entity as unknown as { version: number }).version = nextVersion;
+
+    const condition = this.idCondition(aggregate.id);
+    const qb = this.ormRepository
+      .createQueryBuilder()
+      .update()
+      .set(entity as unknown as QueryDeepPartialEntity<TEntity>);
+
+    // Apply the identity condition from the FindOptionsWhere object
+    const conditionEntries = Object.entries(condition as Record<string, unknown>);
+    for (const [key, value] of conditionEntries) {
+      qb.andWhere(`"${key}" = :${key}`, { [key]: value });
+    }
+
+    // Add version guard
+    qb.andWhere('"version" = :previousVersion', { previousVersion });
+
+    const result = await qb.execute();
+
+    if (result.affected === 0) {
+      throw new OptimisticLockError(aggregate.constructor.name, String(aggregate.id));
+    }
+    aggregate.markPersisted(nextVersion);
   }
 
   async delete(aggregate: TDomain): Promise<void> {

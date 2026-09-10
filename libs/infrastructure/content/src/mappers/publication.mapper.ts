@@ -6,6 +6,7 @@ import {
   Visibility,
   PublicationStatus,
   Mention,
+  GroupId,
 } from '@csn/domain-content';
 import { AggregateMapper } from '@csn/infra-shared';
 import { PublicationEntity } from '../entities/publication.entity';
@@ -51,6 +52,7 @@ export class PublicationMapper
       Timestamp.fromDate(publication.createdAt),
       Timestamp.fromDate(publication.updatedAt),
       publication.version,
+      publication.groupId ? GroupId.create(publication.groupId) : null,
     );
   }
 
@@ -61,6 +63,7 @@ export class PublicationMapper
     publicationEntity.content = domain.content.text;
     publicationEntity.status = domain.status.value;
     publicationEntity.visibility = domain.visibility.value;
+    publicationEntity.groupId = domain.groupId?.value ?? null;
     publicationEntity.createdAt = domain.createdAt.value;
     publicationEntity.updatedAt = domain.updatedAt.value;
     publicationEntity.version = domain.version;

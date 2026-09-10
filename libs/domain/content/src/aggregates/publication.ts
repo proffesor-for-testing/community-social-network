@@ -1,5 +1,6 @@
 import { AggregateRoot, UserId, Timestamp, CONTENT_LIMITS } from '@csn/domain-shared';
 import { PublicationId } from '../value-objects/publication-id';
+import { GroupId } from '../value-objects/group-id';
 import { PublicationContent } from '../value-objects/publication-content';
 import { Visibility, VisibilityEnum } from '../value-objects/visibility';
 import { PublicationStatus } from '../value-objects/publication-status';
@@ -21,6 +22,7 @@ export class Publication extends AggregateRoot<PublicationId> {
   private _mentions: Mention[];
   private _mediaIds: string[];
   private _reactionCounts: Map<string, number>;
+  private _groupId: GroupId | null;
   private _createdAt: Timestamp;
   private _updatedAt: Timestamp;
 
@@ -35,6 +37,7 @@ export class Publication extends AggregateRoot<PublicationId> {
     reactionCounts: Map<string, number>,
     createdAt: Timestamp,
     updatedAt: Timestamp,
+    groupId: GroupId | null,
   ) {
     super(id);
     this._authorId = authorId;
@@ -44,6 +47,7 @@ export class Publication extends AggregateRoot<PublicationId> {
     this._mentions = mentions;
     this._mediaIds = mediaIds;
     this._reactionCounts = reactionCounts;
+    this._groupId = groupId;
     this._createdAt = createdAt;
     this._updatedAt = updatedAt;
   }
@@ -53,6 +57,7 @@ export class Publication extends AggregateRoot<PublicationId> {
     authorId: UserId,
     content: PublicationContent,
     visibility: Visibility,
+    groupId: GroupId | null = null,
   ): Publication {
     const now = Timestamp.now();
     const publication = new Publication(
@@ -66,6 +71,7 @@ export class Publication extends AggregateRoot<PublicationId> {
       new Map<string, number>(),
       now,
       now,
+      groupId,
     );
 
     publication.addDomainEvent(
@@ -94,6 +100,7 @@ export class Publication extends AggregateRoot<PublicationId> {
     createdAt: Timestamp,
     updatedAt: Timestamp,
     version: number,
+    groupId: GroupId | null = null,
   ): Publication {
     const publication = new Publication(
       id,
@@ -106,6 +113,7 @@ export class Publication extends AggregateRoot<PublicationId> {
       reactionCounts,
       createdAt,
       updatedAt,
+      groupId,
     );
     publication['setVersion'](version);
     return publication;
@@ -137,6 +145,16 @@ export class Publication extends AggregateRoot<PublicationId> {
 
   public get reactionCounts(): ReadonlyMap<string, number> {
     return new Map(this._reactionCounts);
+  }
+
+  /** The group this publication was posted into, or null for a personal post. */
+  public get groupId(): GroupId | null {
+    return this._groupId;
+  }
+
+  /** True when the publication lives inside a group rather than the main feed. */
+  public belongsToGroup(): boolean {
+    return this._groupId !== null;
   }
 
   public get createdAt(): Timestamp {

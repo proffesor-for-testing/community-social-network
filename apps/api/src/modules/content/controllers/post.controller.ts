@@ -26,6 +26,7 @@ import { UpdatePostCommand } from '../commands/update-post.command';
 import { DeletePostCommand } from '../commands/delete-post.command';
 import { GetPostQuery } from '../queries/get-post.query';
 import { GetFeedQuery } from '../queries/get-feed.query';
+import { GetExploreFeedQuery } from '../queries/get-explore-feed.query';
 import { FeedResult } from '../queries/get-feed.handler';
 import { PAGINATION } from '@csn/domain-shared';
 
@@ -70,6 +71,24 @@ export class PostController {
       feedQuery.limit ?? PAGINATION.DEFAULT_PAGE_SIZE,
     );
     return this.queryBus.execute<GetFeedQuery, FeedResult>(query);
+  }
+
+  @Public()
+  @Get('api/publications/explore')
+  @ApiOperation({
+    summary: 'Explore feed: all public posts, regardless of who you follow',
+  })
+  @ApiResponse({ status: 200, description: 'Explore feed retrieved' })
+  async getExploreFeed(
+    @Query() feedQuery: FeedQueryDto,
+    @CurrentUser() user?: AccessTokenPayload,
+  ): Promise<FeedResult> {
+    const query = new GetExploreFeedQuery(
+      user?.userId,
+      feedQuery.cursor,
+      feedQuery.limit ?? PAGINATION.DEFAULT_PAGE_SIZE,
+    );
+    return this.queryBus.execute<GetExploreFeedQuery, FeedResult>(query);
   }
 
   @Public()

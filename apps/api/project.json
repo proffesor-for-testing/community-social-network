@@ -21,9 +21,10 @@
       }
     },
     "test": {
-      "executor": "@nx/js:tsc",
+      "executor": "nx:run-commands",
       "options": {
-        "tsConfig": "apps/api/tsconfig.spec.json"
+        "command": "vitest run apps/api",
+        "cwd": "{workspaceRoot}"
       }
     },
     "lint": {

@@ -1,4 +1,5 @@
 import React, { useEffect, useRef } from 'react';
+import { Link } from 'react-router-dom';
 import { Spinner } from '../../../shared/components/atoms/Spinner';
 import { PostCard } from './PostCard';
 import { useFeed } from '../hooks/useFeed';
@@ -55,11 +56,19 @@ export function FeedList() {
   const posts = data?.pages.flatMap((page) => page.items) ?? [];
 
   if (posts.length === 0) {
+    // The feed only shows the viewer's own posts and those of people they
+    // follow, so an empty feed usually means "you follow nobody yet".
     return (
       <div className="py-12 text-center">
         <p className="text-gray-500 dark:text-gray-400">
-          No posts yet. Be the first to share something!
+          Your feed is empty. It fills up with posts from the people you follow.
         </p>
+        <Link
+          to="/explore"
+          className="mt-3 inline-block text-sm font-semibold text-brand-600 hover:underline dark:text-brand-400"
+        >
+          Follow people to fill your feed
+        </Link>
       </div>
     );
   }

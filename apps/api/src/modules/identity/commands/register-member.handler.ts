@@ -14,6 +14,7 @@ import {
 import { RegisterMemberCommand } from './register-member.command';
 import { AuthResponseDto } from '../dto/auth-response.dto';
 import { MemberResponseDto } from '../dto/member-response.dto';
+import { rolesFor } from '../utils/admin-roles';
 
 const BCRYPT_ROUNDS = 12;
 
@@ -28,6 +29,7 @@ export class RegisterMemberHandler {
     private readonly sessionRepository: ISessionRepository,
     @Inject('IProfileRepository')
     private readonly profileRepository: IProfileRepository,
+    @Inject(JwtTokenService)
     private readonly jwtTokenService: JwtTokenService,
   ) {}
 
@@ -95,7 +97,7 @@ export class RegisterMemberHandler {
     const tokenPayload: TokenPayload = {
       userId: memberId.value,
       email: email.value,
-      roles: ['member'],
+      roles: rolesFor(member),
     };
     const tokenPair = await this.jwtTokenService.generateTokenPair(tokenPayload, sessionId.value);
 

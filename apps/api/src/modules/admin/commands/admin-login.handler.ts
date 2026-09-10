@@ -17,7 +17,7 @@ import { MEMBER_REPOSITORY_TOKEN } from '@csn/infra-identity';
 import { AUDIT_ENTRY_REPOSITORY } from '@csn/infra-admin';
 import { JwtTokenService } from '@csn/infra-auth';
 import { AdminLoginCommand } from './admin-login.command';
-import { rolesFor, isAdminEmail } from '../../identity/utils/admin-roles';
+import { rolesFor } from '../../identity/utils/admin-roles';
 
 export interface AdminLoginResult {
   accessToken: string;
@@ -32,6 +32,7 @@ export class AdminLoginHandler {
     private readonly memberRepository: IMemberRepository,
     @Inject(AUDIT_ENTRY_REPOSITORY)
     private readonly auditEntryRepository: IAuditEntryRepository,
+    @Inject(JwtTokenService)
     private readonly jwtTokenService: JwtTokenService,
   ) {}
 
@@ -50,9 +51,8 @@ export class AdminLoginHandler {
       throw new UnauthorizedException('Invalid admin credentials');
     }
 
-    // Compare password against stored bcrypt hash.
-    // In a full implementation, admin role would be verified from a
-    // separate admin table or role field on the member.
+    // Compare password against stored bcrypt hash. Admin authority itself is
+    // carried by the member's `isAdmin` flag, checked after authentication.
     const isValid = await bcrypt.compare(
       command.password,
       member.credential.value,
@@ -87,10 +87,9 @@ export class AdminLoginHandler {
       command.ipAddress,
     );
 
-    // Reject anyone whose email isn't on the admin allowlist — the admin-login
-    // endpoint must not grant elevated privileges to non-admins, even with
-    // valid credentials.
-    if (!isAdminEmail(member.email.value)) {
+    // Reject anyone who is not an admin — the admin-login endpoint must not
+    // grant elevated privileges to non-admins, even with valid credentials.
+    if (!member.isAdmin) {
       throw new UnauthorizedException('Not an admin account');
     }
     // Mint a canonical access token via the shared JwtTokenService so the
@@ -98,7 +97,7 @@ export class AdminLoginHandler {
     const accessToken = await this.jwtTokenService.generateAccessToken({
       userId: member.id.value,
       email: member.email.value,
-      roles: rolesFor(member.email.value),
+      roles: rolesFor(member),
     });
 
     return {

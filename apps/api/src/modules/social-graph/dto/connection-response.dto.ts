@@ -1,15 +1,15 @@
 import { Connection } from '@csn/domain-social-graph';
 
 export class ConnectionResponseDto {
-  id: string;
-  followerId: string;
+  id!: string;
+  followerId!: string;
   followerName?: string;
   followerAvatarUrl?: string | null;
-  followeeId: string;
+  followeeId!: string;
   followeeName?: string;
   followeeAvatarUrl?: string | null;
-  status: string;
-  createdAt: string;
+  status!: string;
+  createdAt!: string;
 
   public static fromDomain(
     connection: Connection,

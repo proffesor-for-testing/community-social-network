@@ -3,6 +3,7 @@ import { UserId } from '@csn/domain-shared';
 import {
   Connection,
   ConnectionId,
+  ConnectionStatusEnum,
   IConnectionRepository,
 } from '@csn/domain-social-graph';
 import { ConnectionMapper } from '../mappers/connection.mapper';
@@ -68,6 +69,19 @@ export class InMemoryConnectionRepository implements IConnectionRepository {
       }
     }
     return results;
+  }
+
+  async findAcceptedFolloweeIds(userId: UserId): Promise<UserId[]> {
+    const followeeIds: UserId[] = [];
+    for (const entity of this.store.values()) {
+      if (
+        entity.followerId === userId.value &&
+        entity.status === ConnectionStatusEnum.ACCEPTED
+      ) {
+        followeeIds.push(UserId.create(entity.followeeId));
+      }
+    }
+    return followeeIds;
   }
 
   async countFollowers(userId: UserId): Promise<number> {

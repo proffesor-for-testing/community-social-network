@@ -9,7 +9,7 @@
     "experimentalDecorators": true,
     "target": "ES2021",
     "sourceMap": true,
-    "types": ["node"]
+    "types": ["node", "multer"]
   },
   "include": ["src/**/*.ts"],
   "exclude": ["node_modules", "dist", "**/*.spec.ts", "**/*.test.ts"]

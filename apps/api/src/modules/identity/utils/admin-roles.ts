@@ -1,25 +1,35 @@
 /**
- * Determine the role array to embed in JWTs for a given member email.
+ * Determine the role array to embed in JWTs for a member.
  *
- * Source of truth (in priority order):
- *   1. `ADMIN_EMAILS` env var, a comma-separated list of admin emails.
- *      Whitespace is trimmed; comparison is case-insensitive.
+ * Admin status is a data-layer fact on the Member aggregate (`isAdmin`),
+ * so login, refresh, and admin-login all derive roles from the same source.
  *
- * Until the Member aggregate carries a real role field, this single helper
- * is the canonical place that answers "is this email an admin?" so login,
- * refresh, and admin-login all agree.
+ * `ADMIN_EMAILS` survives only as a one-time bootstrap allowlist consumed by
+ * `AdminBootstrapService` on API startup — it never grants roles at token
+ * minting time.
  */
-export function rolesFor(email: string): string[] {
-  return isAdminEmail(email) ? ['admin', 'member'] : ['member'];
+export interface RoleBearingMember {
+  readonly isAdmin: boolean;
 }
 
-export function isAdminEmail(email: string): boolean {
+export function rolesFor(member: RoleBearingMember): string[] {
+  return member.isAdmin ? ['admin', 'member'] : ['member'];
+}
+
+/**
+ * Bootstrap-only: is this email listed in the `ADMIN_EMAILS` env allowlist?
+ * Whitespace is trimmed; comparison is case-insensitive.
+ */
+export function isBootstrapAdminEmail(email: string): boolean {
+  return bootstrapAdminEmails().includes(email.trim().toLowerCase());
+}
+
+/** Bootstrap-only: the normalised list of emails in `ADMIN_EMAILS`. */
+export function bootstrapAdminEmails(): string[] {
   const raw = process.env['ADMIN_EMAILS'] ?? '';
-  if (!raw) return false;
-  const needle = email.trim().toLowerCase();
+  if (!raw) return [];
   return raw
     .split(',')
     .map((e) => e.trim().toLowerCase())
-    .filter(Boolean)
-    .includes(needle);
+    .filter(Boolean);
 }

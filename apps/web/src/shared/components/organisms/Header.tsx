@@ -5,6 +5,7 @@ import { useUiStore } from '../../../stores/ui.store';
 import { useNotificationStore } from '../../../stores/notification.store';
 import { useLogout } from '../../../features/auth/hooks/useLogout';
 import { useUnreadCount } from '../../../features/notifications/hooks/useUnreadCount';
+import { useConversations } from '../../../features/messages/hooks/useConversations';
 import { Avatar } from '../atoms/Avatar';
 import { Badge } from '../atoms/Badge';
 
@@ -17,6 +18,10 @@ export function Header() {
 
   // Drive the unread-count polling so the badge stays in sync with the API.
   useUnreadCount();
+
+  // The inbox query already carries a total, so the Messages badge is free.
+  const { data: conversations } = useConversations();
+  const unreadMessages = conversations?.totalUnread ?? 0;
 
   const [menuOpen, setMenuOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
@@ -83,6 +88,22 @@ export function Header() {
       </Link>
 
       <div className="flex-1" />
+
+      {/* Messages */}
+      <Link
+        to="/messages"
+        aria-label={`Messages${unreadMessages > 0 ? ` (${unreadMessages} unread)` : ''}`}
+        className="relative rounded-lg p-2 text-gray-500 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-surface-dark-tertiary"
+      >
+        <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
+          <path strokeLinecap="round" strokeLinejoin="round" d="M8.625 12a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Zm0 0H8.25m4.125 0a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Zm0 0H12m4.125 0a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Zm0 0h-.375M21 12c0 4.556-4.03 8.25-9 8.25a9.764 9.764 0 0 1-2.555-.337A5.972 5.972 0 0 1 5.41 20.97a5.969 5.969 0 0 1-.474-.065 4.48 4.48 0 0 0 .978-2.025c.09-.457-.133-.901-.467-1.226C3.93 16.178 3 14.189 3 12c0-4.556 4.03-8.25 9-8.25s9 3.694 9 8.25Z" />
+        </svg>
+        {unreadMessages > 0 && (
+          <span className="absolute right-1 top-1 flex h-4 min-w-[16px] items-center justify-center rounded-full bg-red-500 px-1 text-[10px] font-bold text-white">
+            {unreadMessages > 99 ? '99+' : unreadMessages}
+          </span>
+        )}
+      </Link>
 
       {/* Notifications */}
       <Link

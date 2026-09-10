@@ -19,6 +19,8 @@ export { Verify2faCommand } from './commands/verify-2fa.command';
 export { SuspendUserCommand } from './commands/suspend-user.command';
 export { UnsuspendUserCommand } from './commands/unsuspend-user.command';
 export { Setup2faCommand } from './commands/setup-2fa.command';
+export { PromoteUserCommand } from './commands/promote-user.command';
+export { DemoteUserCommand } from './commands/demote-user.command';
 
 // Command Handlers
 export { AdminLoginHandler } from './commands/admin-login.handler';
@@ -26,6 +28,8 @@ export { Verify2faHandler } from './commands/verify-2fa.handler';
 export { SuspendUserHandler } from './commands/suspend-user.handler';
 export { UnsuspendUserHandler } from './commands/unsuspend-user.handler';
 export { Setup2faHandler } from './commands/setup-2fa.handler';
+export { PromoteUserHandler } from './commands/promote-user.handler';
+export { DemoteUserHandler } from './commands/demote-user.handler';
 
 // Queries
 export { GetUsersQuery } from './queries/get-users.query';

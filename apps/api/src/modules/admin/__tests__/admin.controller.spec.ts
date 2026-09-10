@@ -1,13 +1,20 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { NotFoundException, ConflictException } from '@nestjs/common';
+import {
+  NotFoundException,
+  ConflictException,
+  ForbiddenException,
+} from '@nestjs/common';
 import { AdminController } from '../controllers/admin.controller';
 import { SuspendUserHandler } from '../commands/suspend-user.handler';
 import { UnsuspendUserHandler } from '../commands/unsuspend-user.handler';
+import { PromoteUserHandler } from '../commands/promote-user.handler';
+import { DemoteUserHandler } from '../commands/demote-user.handler';
 import { Setup2faHandler } from '../commands/setup-2fa.handler';
 import { Verify2faHandler } from '../commands/verify-2fa.handler';
 import { GetUsersHandler } from '../queries/get-users.handler';
 import { GetAuditLogHandler } from '../queries/get-audit-log.handler';
 import { GetSecurityAlertsHandler } from '../queries/get-security-alerts.handler';
+import { GetAdminStatsHandler } from '../queries/get-stats.handler';
 import { AdminUserResponseDto, AuditLogResponseDto, SecurityAlertResponseDto } from '../dto/admin-response.dto';
 import { SuspendUserDto } from '../dto/suspend-user.dto';
 import { AuditLogQueryDto } from '../dto/audit-log-query.dto';
@@ -37,6 +44,7 @@ function createMockAdminUserResponse(): AdminUserResponseDto {
   dto.failedLoginAttempts = 0;
   dto.lastLoginAt = null;
   dto.createdAt = '2024-01-15T10:30:00.000Z';
+  dto.isAdmin = false;
   return dto;
 }
 
@@ -99,29 +107,38 @@ describe('AdminController', () => {
   let controller: AdminController;
   let suspendUserHandler: { execute: ReturnType<typeof vi.fn> };
   let unsuspendUserHandler: { execute: ReturnType<typeof vi.fn> };
+  let promoteUserHandler: { execute: ReturnType<typeof vi.fn> };
+  let demoteUserHandler: { execute: ReturnType<typeof vi.fn> };
   let setup2faHandler: { execute: ReturnType<typeof vi.fn> };
   let verify2faHandler: { execute: ReturnType<typeof vi.fn> };
   let getUsersHandler: { execute: ReturnType<typeof vi.fn> };
   let getAuditLogHandler: { execute: ReturnType<typeof vi.fn> };
   let getSecurityAlertsHandler: { execute: ReturnType<typeof vi.fn> };
+  let getAdminStatsHandler: { execute: ReturnType<typeof vi.fn> };
 
   beforeEach(() => {
     suspendUserHandler = { execute: vi.fn() };
     unsuspendUserHandler = { execute: vi.fn() };
+    promoteUserHandler = { execute: vi.fn() };
+    demoteUserHandler = { execute: vi.fn() };
     setup2faHandler = { execute: vi.fn() };
     verify2faHandler = { execute: vi.fn() };
     getUsersHandler = { execute: vi.fn() };
     getAuditLogHandler = { execute: vi.fn() };
     getSecurityAlertsHandler = { execute: vi.fn() };
+    getAdminStatsHandler = { execute: vi.fn() };
 
     controller = new AdminController(
       suspendUserHandler as unknown as SuspendUserHandler,
       unsuspendUserHandler as unknown as UnsuspendUserHandler,
+      promoteUserHandler as unknown as PromoteUserHandler,
+      demoteUserHandler as unknown as DemoteUserHandler,
       setup2faHandler as unknown as Setup2faHandler,
       verify2faHandler as unknown as Verify2faHandler,
       getUsersHandler as unknown as GetUsersHandler,
       getAuditLogHandler as unknown as GetAuditLogHandler,
       getSecurityAlertsHandler as unknown as GetSecurityAlertsHandler,
+      getAdminStatsHandler as unknown as GetAdminStatsHandler,
     );
   });
 
@@ -246,6 +263,101 @@ describe('AdminController', () => {
       await expect(
         controller.unsuspendUser('user-uuid-999', req),
       ).rejects.toThrow(NotFoundException);
+    });
+  });
+
+
+  // ─── POST /api/admin/users/:id/promote ───
+
+  describe('POST /api/admin/users/:id/promote', () => {
+    it('should return the promoted user with isAdmin true', async () => {
+      // Arrange
+      const promoted = createMockAdminUserResponse();
+      promoted.isAdmin = true;
+      promoteUserHandler.execute.mockResolvedValue(promoted);
+      const req = createMockRequest();
+
+      // Act
+      const result = await controller.promoteUser('user-uuid-1', req);
+
+      // Assert
+      expect(result.isAdmin).toBe(true);
+    });
+
+    it('should forward the acting admin, target and IP to the handler', async () => {
+      // Arrange
+      promoteUserHandler.execute.mockResolvedValue(createMockAdminUserResponse());
+      const req = createMockRequest();
+
+      // Act
+      await controller.promoteUser('user-uuid-1', req);
+
+      // Assert
+      expect(promoteUserHandler.execute).toHaveBeenCalledWith({
+        adminId: 'admin-uuid-1',
+        targetUserId: 'user-uuid-1',
+        ipAddress: '192.168.1.100',
+      });
+    });
+
+    it('should propagate NotFoundException when the target does not exist', async () => {
+      // Arrange
+      promoteUserHandler.execute.mockRejectedValue(
+        new NotFoundException('Member with id user-uuid-999 not found'),
+      );
+      const req = createMockRequest();
+
+      // Act & Assert
+      await expect(
+        controller.promoteUser('user-uuid-999', req),
+      ).rejects.toThrow(NotFoundException);
+    });
+  });
+
+  // ─── POST /api/admin/users/:id/demote ───
+
+  describe('POST /api/admin/users/:id/demote', () => {
+    it('should return the demoted user with isAdmin false', async () => {
+      // Arrange
+      const demoted = createMockAdminUserResponse();
+      demoted.isAdmin = false;
+      demoteUserHandler.execute.mockResolvedValue(demoted);
+      const req = createMockRequest();
+
+      // Act
+      const result = await controller.demoteUser('user-uuid-1', req);
+
+      // Assert
+      expect(result.isAdmin).toBe(false);
+    });
+
+    it('should forward the acting admin, target and IP to the handler', async () => {
+      // Arrange
+      demoteUserHandler.execute.mockResolvedValue(createMockAdminUserResponse());
+      const req = createMockRequest();
+
+      // Act
+      await controller.demoteUser('user-uuid-1', req);
+
+      // Assert
+      expect(demoteUserHandler.execute).toHaveBeenCalledWith({
+        adminId: 'admin-uuid-1',
+        targetUserId: 'user-uuid-1',
+        ipAddress: '192.168.1.100',
+      });
+    });
+
+    it('should propagate ForbiddenException when an admin demotes themselves', async () => {
+      // Arrange
+      demoteUserHandler.execute.mockRejectedValue(
+        new ForbiddenException('An admin cannot demote themselves'),
+      );
+      const req = createMockRequest();
+
+      // Act & Assert
+      await expect(
+        controller.demoteUser('admin-uuid-1', req),
+      ).rejects.toThrow(ForbiddenException);
     });
   });
 

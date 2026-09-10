@@ -125,3 +125,38 @@ describe('feed adaptPost — viewerReaction handling', () => {
     expect(out).toBeNull();
   });
 });
+
+describe('feed adaptPost — group association', () => {
+  it('should carry the API groupId onto the FE post', () => {
+    // Arrange
+    const p = apiPost({ groupId: 'g1' });
+
+    // Act
+    const out = adaptPost(p);
+
+    // Assert
+    expect(out.groupId).toBe('g1');
+  });
+
+  it('should default groupId to null when the API omits it', () => {
+    // Arrange
+    const p = apiPost();
+
+    // Act
+    const out = adaptPost(p);
+
+    // Assert
+    expect(out.groupId).toBeNull();
+  });
+
+  it('should map an explicit null groupId to null', () => {
+    // Arrange
+    const p = apiPost({ groupId: null });
+
+    // Act
+    const out = adaptPost(p);
+
+    // Assert
+    expect(out.groupId).toBeNull();
+  });
+});

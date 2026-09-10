@@ -109,6 +109,14 @@ const routes: RouteObject[] = [
             ),
           },
           {
+            path: 'messages/:conversationId',
+            element: (
+              <PageSuspense>
+                <MessagesPage />
+              </PageSuspense>
+            ),
+          },
+          {
             path: 'settings',
             element: (
               <PageSuspense>

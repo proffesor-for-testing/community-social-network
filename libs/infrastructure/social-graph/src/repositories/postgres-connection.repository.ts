@@ -5,6 +5,7 @@ import { UserId } from '@csn/domain-shared';
 import {
   Connection,
   ConnectionId,
+  ConnectionStatusEnum,
   IConnectionRepository,
 } from '@csn/domain-social-graph';
 import { ConnectionEntity } from '../entities/connection.entity';
@@ -58,6 +59,23 @@ export class PostgresConnectionRepository
       } as FindOptionsWhere<ConnectionEntity>,
     });
     return entities.map((entity) => this.mapper.toDomain(entity));
+  }
+
+  async findAcceptedFolloweeIds(userId: UserId): Promise<UserId[]> {
+    // Projection query: only the followee column is selected, so a member with
+    // thousands of followees still costs one narrow scan per feed page.
+    const rows = await this.ormRepository
+      .createQueryBuilder('connection')
+      .select('connection.followeeId', 'followeeId')
+      .where('connection.followerId = :followerId', {
+        followerId: userId.value,
+      })
+      .andWhere('connection.status = :status', {
+        status: ConnectionStatusEnum.ACCEPTED,
+      })
+      .getRawMany<{ followeeId: string }>();
+
+    return rows.map((row) => UserId.create(row.followeeId));
   }
 
   async countFollowers(userId: UserId): Promise<number> {

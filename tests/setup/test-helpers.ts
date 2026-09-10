@@ -72,6 +72,7 @@ export interface CreateTestMemberOpts {
   email?: string;
   displayName?: string;
   password?: string;
+  isAdmin?: boolean;
 }
 
 /**
@@ -91,6 +92,10 @@ export async function createTestMember(
 
   const member = Member.register(id, email, credential, displayName);
   member.activate();
+
+  if (opts.isAdmin) {
+    member.promoteToAdmin('test-fixture');
+  }
 
   return member;
 }

@@ -18,12 +18,20 @@ import { InMemoryPublicationRepository, InMemoryDiscussionRepository } from '@cs
 import { InMemoryConnectionRepository, InMemoryBlockRepository } from '@csn/infra-social-graph';
 import { InMemoryGroupRepository, InMemoryMembershipRepository } from '@csn/infra-community';
 import { InMemoryAlertRepository, InMemoryPreferenceRepository } from '@csn/infra-notification';
+import {
+  InMemoryConversationRepository,
+  InMemoryDirectMessageRepository,
+} from '@csn/infra-direct-messages';
 import { InMemoryAuditEntryRepository } from '@csn/infra-admin';
 
 // ── Repository tokens ───────────────────────────────────────────────────────
 
 import { MEMBER_REPOSITORY_TOKEN, SESSION_REPOSITORY_TOKEN } from '@csn/infra-identity';
 import { ALERT_REPOSITORY_TOKEN, PREFERENCE_REPOSITORY_TOKEN } from '@csn/infra-notification';
+import {
+  CONVERSATION_REPOSITORY_TOKEN,
+  MESSAGE_REPOSITORY_TOKEN,
+} from '@csn/infra-direct-messages';
 import { GROUP_REPOSITORY, MEMBERSHIP_REPOSITORY } from '@csn/infra-community';
 import { AUDIT_ENTRY_REPOSITORY } from '@csn/infra-admin';
 
@@ -50,6 +58,8 @@ export interface TestRepositories {
   alertRepo: InMemoryAlertRepository;
   preferenceRepo: InMemoryPreferenceRepository;
   auditEntryRepo: InMemoryAuditEntryRepository;
+  conversationRepo: InMemoryConversationRepository;
+  directMessageRepo: InMemoryDirectMessageRepository;
 }
 
 export function createTestRepositories(): TestRepositories {
@@ -66,6 +76,8 @@ export function createTestRepositories(): TestRepositories {
     alertRepo: new InMemoryAlertRepository(),
     preferenceRepo: new InMemoryPreferenceRepository(),
     auditEntryRepo: new InMemoryAuditEntryRepository(),
+    conversationRepo: new InMemoryConversationRepository(),
+    directMessageRepo: new InMemoryDirectMessageRepository(),
   };
 }
 
@@ -256,4 +268,6 @@ export {
   ALERT_REPOSITORY_TOKEN,
   PREFERENCE_REPOSITORY_TOKEN,
   AUDIT_ENTRY_REPOSITORY,
+  CONVERSATION_REPOSITORY_TOKEN,
+  MESSAGE_REPOSITORY_TOKEN,
 };
