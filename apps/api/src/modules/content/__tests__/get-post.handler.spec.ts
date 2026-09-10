@@ -37,8 +37,12 @@ class StubPublicationRepo {
 }
 
 class StubDiscussionRepo {
+  constructor(private readonly count = 0) {}
   async findByPublicationId(): Promise<unknown[]> {
     return [];
+  }
+  async countActiveByPublicationIds(ids: PublicationId[]): Promise<Map<string, number>> {
+    return new Map(ids.map((id) => [id.value, this.count]));
   }
 }
 
@@ -123,5 +127,83 @@ describe('GetPostHandler — author enrichment', () => {
 
     // Assert
     expect(profileRepo.memberCalls.map((u) => u.value)).toEqual([alice.value]);
+  });
+
+  describe('viewerReaction enrichment', () => {
+    it('should set viewerReaction for the requesting viewer', async () => {
+      // Arrange
+      const lookup = {
+        findByViewer: async () => new Map([[publication.id.value, 'WOW']]),
+      };
+      const handler = new GetPostHandler(
+        new StubPublicationRepo(publication) as never,
+        new StubDiscussionRepo() as never,
+        new StubProfileRepo(null) as never,
+        lookup as never,
+      );
+
+      // Act
+      const result = await handler.execute(new GetPostQuery(publication.id.value, 'viewer-1'));
+
+      // Assert
+      expect(result.viewerReaction).toBe('WOW');
+    });
+
+    it('should pass the viewer id from the query into the lookup', async () => {
+      // Arrange
+      const seen: unknown[] = [];
+      const lookup = {
+        findByViewer: async (_ids: string[], viewer?: string) => {
+          seen.push(viewer);
+          return new Map();
+        },
+      };
+      const handler = new GetPostHandler(
+        new StubPublicationRepo(publication) as never,
+        new StubDiscussionRepo() as never,
+        new StubProfileRepo(null) as never,
+        lookup as never,
+      );
+
+      // Act
+      await handler.execute(new GetPostQuery(publication.id.value, 'viewer-9'));
+
+      // Assert
+      expect(seen).toEqual(['viewer-9']);
+    });
+
+    it('should return viewerReaction null for an anonymous viewer', async () => {
+      // Arrange
+      const lookup = { findByViewer: async () => new Map() };
+      const handler = new GetPostHandler(
+        new StubPublicationRepo(publication) as never,
+        new StubDiscussionRepo() as never,
+        new StubProfileRepo(null) as never,
+        lookup as never,
+      );
+
+      // Act
+      const result = await handler.execute(new GetPostQuery(publication.id.value));
+
+      // Assert
+      expect(result.viewerReaction).toBeNull();
+    });
+  });
+
+  describe('commentCount', () => {
+    it('should report the active comment count for the post', async () => {
+      // Arrange
+      const handler = new GetPostHandler(
+        new StubPublicationRepo(publication) as never,
+        new StubDiscussionRepo(4) as never,
+        new StubProfileRepo(null) as never,
+      );
+
+      // Act
+      const result = await handler.execute(new GetPostQuery(publication.id.value));
+
+      // Assert
+      expect(result.commentCount).toBe(4);
+    });
   });
 });

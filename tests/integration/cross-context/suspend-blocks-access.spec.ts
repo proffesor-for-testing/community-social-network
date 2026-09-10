@@ -56,6 +56,7 @@ describe('Cross-Context: Suspend Blocks Access', () => {
     registerHandler = new RegisterMemberHandler(
       repos.memberRepo,
       repos.sessionRepo,
+      repos.profileRepo,
       mockJwt as any,
     );
     loginHandler = new LoginMemberHandler(

@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { adaptPost } from '../queries';
+import { adaptPost, adaptViewerReaction } from '../queries';
 
 function apiPost(overrides: Record<string, unknown> = {}) {
   return {
@@ -82,5 +82,46 @@ describe('feed adaptPost — authorName handling', () => {
 
     // Assert
     expect(out.authorAvatarUrl).toBeNull();
+  });
+});
+
+describe('feed adaptPost — viewerReaction handling', () => {
+  it.each([
+    ['LIKE', 'like'],
+    ['LOVE', 'love'],
+    ['HAHA', 'laugh'],
+    ['WOW', 'wow'],
+    ['SAD', 'sad'],
+    ['ANGRY', 'angry'],
+  ])('should map API %s to FE %s', (api, fe) => {
+    // Act
+    const out = adaptPost(apiPost({ viewerReaction: api }));
+
+    // Assert
+    expect(out.viewerReaction).toBe(fe);
+  });
+
+  it('should map null viewerReaction to null', () => {
+    // Act
+    const out = adaptPost(apiPost({ viewerReaction: null }));
+
+    // Assert
+    expect(out.viewerReaction).toBeNull();
+  });
+
+  it('should map a missing viewerReaction field to null', () => {
+    // Act
+    const out = adaptPost(apiPost());
+
+    // Assert
+    expect(out.viewerReaction).toBeNull();
+  });
+
+  it('should map an unknown enum value to null rather than throwing', () => {
+    // Act
+    const out = adaptViewerReaction('CONFUSED');
+
+    // Assert
+    expect(out).toBeNull();
   });
 });

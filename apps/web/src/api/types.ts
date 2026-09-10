@@ -90,6 +90,8 @@ export interface PublicationDto {
   tags: string[];
   reactionCount: number;
   commentCount: number;
+  /** The viewer's own reaction on this post, if any. */
+  viewerReaction: 'like' | 'love' | 'laugh' | 'wow' | 'sad' | 'angry' | null;
   createdAt: string;
   updatedAt: string;
 }

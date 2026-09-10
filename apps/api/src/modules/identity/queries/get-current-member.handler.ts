@@ -19,6 +19,6 @@ export class GetCurrentMemberHandler {
       throw new NotFoundException('Member not found');
     }
 
-    return MemberResponseDto.fromDomain(member);
+    return MemberResponseDto.fromDomain(member, MemberResponseDto.roleFromClaims(query.roles));
   }
 }

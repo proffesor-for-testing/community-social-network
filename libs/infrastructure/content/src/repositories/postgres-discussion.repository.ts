@@ -6,6 +6,7 @@ import {
   DiscussionId,
   PublicationId,
   IDiscussionRepository,
+  DiscussionStatusEnum,
 } from '@csn/domain-content';
 import { BaseRepository } from '@csn/infra-shared';
 import { DiscussionEntity } from '../entities/discussion.entity';
@@ -44,5 +45,26 @@ export class PostgresDiscussionRepository
     });
 
     return entities.map((entity) => this.discussionMapper.toDomain(entity));
+  }
+
+  async countActiveByPublicationIds(
+    publicationIds: PublicationId[],
+  ): Promise<Map<string, number>> {
+    const result = new Map<string, number>();
+    if (publicationIds.length === 0) {
+      return result;
+    }
+    const rows: { publicationId: string; count: string }[] = await this.ormRepository
+      .createQueryBuilder('d')
+      .select('d.publication_id', 'publicationId')
+      .addSelect('COUNT(*)', 'count')
+      .where('d.publication_id IN (:...ids)', { ids: publicationIds.map((id) => id.value) })
+      .andWhere('d.status = :status', { status: DiscussionStatusEnum.ACTIVE })
+      .groupBy('d.publication_id')
+      .getRawMany();
+    for (const row of rows) {
+      result.set(row.publicationId, Number(row.count));
+    }
+    return result;
   }
 }

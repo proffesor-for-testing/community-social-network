@@ -2,6 +2,7 @@ import React, { lazy, Suspense } from 'react';
 import type { RouteObject } from 'react-router-dom';
 import { Spinner } from '../../shared/components/atoms/Spinner';
 import { AdminLoginForm } from './components/AdminLoginForm';
+import { AdminRoute } from './components/AdminRoute';
 
 const DashboardLazy = lazy(() =>
   import('./components/Dashboard').then((m) => ({ default: m.Dashboard })),
@@ -38,6 +39,7 @@ function Fallback() {
 export const adminRoutes: RouteObject[] = [
   {
     path: 'admin',
+    element: <AdminRoute />,
     children: [
       {
         index: true,

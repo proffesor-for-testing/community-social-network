@@ -4,6 +4,7 @@ import { ConflictException, BadRequestException } from '@nestjs/common';
 import { Member, MemberId, Credential, Session, SessionId } from '@csn/domain-identity';
 import { Email, Timestamp } from '@csn/domain-shared';
 import { InMemoryMemberRepository, InMemorySessionRepository } from '@csn/infra-identity';
+import { InMemoryProfileRepository } from '@csn/infra-profile';
 import { RegisterMemberHandler } from '../commands/register-member.handler';
 import { RegisterMemberCommand } from '../commands/register-member.command';
 
@@ -34,17 +35,20 @@ function createMockJwtTokenService() {
 describe('RegisterMemberHandler', () => {
   let memberRepository: InMemoryMemberRepository;
   let sessionRepository: InMemorySessionRepository;
+  let profileRepository: InMemoryProfileRepository;
   let jwtTokenService: ReturnType<typeof createMockJwtTokenService>;
   let handler: RegisterMemberHandler;
 
   beforeEach(() => {
     memberRepository = new InMemoryMemberRepository();
     sessionRepository = new InMemorySessionRepository();
+    profileRepository = new InMemoryProfileRepository();
     jwtTokenService = createMockJwtTokenService();
 
     handler = new RegisterMemberHandler(
       memberRepository,
       sessionRepository,
+      profileRepository,
       jwtTokenService as any,
     );
 

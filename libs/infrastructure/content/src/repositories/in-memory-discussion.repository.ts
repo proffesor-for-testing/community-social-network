@@ -4,6 +4,7 @@ import {
   DiscussionId,
   PublicationId,
   IDiscussionRepository,
+  DiscussionStatusEnum,
 } from '@csn/domain-content';
 import { OptimisticLockError } from '@csn/infra-shared';
 import { DiscussionMapper } from '../mappers/discussion.mapper';
@@ -58,6 +59,19 @@ export class InMemoryDiscussionRepository implements IDiscussionRepository {
       }
     }
     return results;
+  }
+
+  async countActiveByPublicationIds(
+    publicationIds: PublicationId[],
+  ): Promise<Map<string, number>> {
+    const wanted = new Set(publicationIds.map((id) => id.value));
+    const result = new Map<string, number>();
+    for (const entity of this.store.values()) {
+      if (wanted.has(entity.publicationId) && entity.status === DiscussionStatusEnum.ACTIVE) {
+        result.set(entity.publicationId, (result.get(entity.publicationId) ?? 0) + 1);
+      }
+    }
+    return result;
   }
 
   /** Test helper: clear all data */

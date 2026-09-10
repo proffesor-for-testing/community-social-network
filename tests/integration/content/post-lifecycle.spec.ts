@@ -12,11 +12,14 @@
  * 5. Delete the post
  * 6. Verify deleted post is not found
  */
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { Test, TestingModule } from '@nestjs/testing';
 import { NotFoundException, ForbiddenException } from '@nestjs/common';
 import { CommandBus, QueryBus, CqrsModule } from '@nestjs/cqrs';
+import { getRepositoryToken } from '@nestjs/typeorm';
 import { randomUUID } from 'crypto';
+import { ReactionEntity } from '@csn/infra-content';
+import { AlertCreatorService } from '../../../apps/api/src/modules/notification/services/alert-creator.service';
 
 // ── Handlers ────────────────────────────────────────────────────────────────
 
@@ -38,6 +41,8 @@ import {
   TestRepositories,
   PUBLICATION_REPOSITORY_TOKEN,
   DISCUSSION_REPOSITORY_TOKEN,
+  PROFILE_REPOSITORY_TOKEN,
+  ALERT_REPOSITORY_TOKEN,
 } from '../../setup/test-app';
 import { VisibilityEnum, ReactionTypeEnum } from '@csn/domain-content';
 
@@ -59,10 +64,33 @@ describe('Content: Post Lifecycle', () => {
         CreatePostHandler,
         UpdatePostHandler,
         DeletePostHandler,
-        AddReactionHandler,
         GetPostHandler,
+        AlertCreatorService,
         { provide: PUBLICATION_REPOSITORY_TOKEN, useValue: repos.publicationRepo },
         { provide: DISCUSSION_REPOSITORY_TOKEN, useValue: repos.discussionRepo },
+        { provide: PROFILE_REPOSITORY_TOKEN, useValue: repos.profileRepo },
+        { provide: ALERT_REPOSITORY_TOKEN, useValue: repos.alertRepo },
+        {
+          provide: getRepositoryToken(ReactionEntity),
+          useValue: { upsert: vi.fn().mockResolvedValue(undefined) },
+        },
+        // AddReactionHandler's third constructor parameter (AlertCreatorService)
+        // has no @Inject() decorator, relying on TS design:paramtypes metadata.
+        // Under vitest's esbuild-based transform that metadata isn't emitted for
+        // plain class-typed params (only tsc's full emitDecoratorMetadata
+        // supports it, which is what the real ts-node/webpack build uses), so
+        // Nest's TestingModule silently resolves it as undefined. Providing an
+        // explicit factory with an `inject` token list sidesteps the missing
+        // reflection metadata.
+        {
+          provide: AddReactionHandler,
+          useFactory: (
+            publicationRepository: unknown,
+            reactionRepository: unknown,
+            alerts: AlertCreatorService,
+          ) => new AddReactionHandler(publicationRepository as never, reactionRepository as never, alerts),
+          inject: [PUBLICATION_REPOSITORY_TOKEN, getRepositoryToken(ReactionEntity), AlertCreatorService],
+        },
       ],
     }).compile();
 

@@ -34,6 +34,7 @@ import { GetFollowersHandler } from '../../../apps/api/src/modules/social-graph/
 import { GetFollowersQuery } from '../../../apps/api/src/modules/social-graph/queries/get-followers.query';
 import { GetFollowingHandler } from '../../../apps/api/src/modules/social-graph/queries/get-following.handler';
 import { GetFollowingQuery } from '../../../apps/api/src/modules/social-graph/queries/get-following.query';
+import { AlertCreatorService } from '../../../apps/api/src/modules/notification/services/alert-creator.service';
 
 // ── Test infrastructure ─────────────────────────────────────────────────────
 
@@ -42,6 +43,7 @@ import {
   TestRepositories,
   CONNECTION_REPOSITORY_TOKEN,
   BLOCK_REPOSITORY_TOKEN,
+  PROFILE_REPOSITORY_TOKEN,
 } from '../../setup/test-app';
 
 describe('Social Graph: Follow / Unfollow Flow', () => {
@@ -63,13 +65,35 @@ describe('Social Graph: Follow / Unfollow Flow', () => {
 
     module = await Test.createTestingModule({
       providers: [
-        FollowMemberHandler,
-        ApproveFollowHandler,
+        // FollowMemberHandler's third constructor parameter
+        // (AlertCreatorService) has no @Inject() decorator, relying on TS
+        // design:paramtypes metadata. Under vitest's esbuild-based transform
+        // that metadata isn't emitted for plain class-typed params (only
+        // tsc's full emitDecoratorMetadata supports it), so Nest's
+        // TestingModule silently resolves it as undefined. An explicit
+        // factory with an `inject` token list sidesteps the missing
+        // reflection metadata.
+        {
+          provide: FollowMemberHandler,
+          useFactory: (connectionRepo: unknown, blockRepo: unknown, alerts: AlertCreatorService) =>
+            new FollowMemberHandler(connectionRepo as never, blockRepo as never, alerts),
+          inject: [CONNECTION_REPOSITORY_TOKEN, BLOCK_REPOSITORY_TOKEN, AlertCreatorService],
+        },
+        AlertCreatorService,
+        // Same undecorated-param DI limitation as FollowMemberHandler above.
+        {
+          provide: ApproveFollowHandler,
+          useFactory: (connectionRepo: unknown, alerts: AlertCreatorService) =>
+            new ApproveFollowHandler(connectionRepo as never, alerts),
+          inject: [CONNECTION_REPOSITORY_TOKEN, AlertCreatorService],
+        },
         UnfollowMemberHandler,
         GetFollowersHandler,
         GetFollowingHandler,
         { provide: CONNECTION_REPOSITORY_TOKEN, useValue: repos.connectionRepo },
         { provide: BLOCK_REPOSITORY_TOKEN, useValue: repos.blockRepo },
+        { provide: PROFILE_REPOSITORY_TOKEN, useValue: repos.profileRepo },
+        { provide: 'IAlertRepository', useValue: repos.alertRepo },
       ],
     }).compile();
 

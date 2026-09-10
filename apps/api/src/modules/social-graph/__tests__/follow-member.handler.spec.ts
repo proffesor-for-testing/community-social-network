@@ -9,11 +9,13 @@ import {
 } from '@csn/domain-social-graph';
 import { FollowMemberHandler } from '../commands/follow-member.handler';
 import { FollowMemberCommand } from '../commands/follow-member.command';
+import { AlertCreatorService } from '../../notification/services/alert-creator.service';
 
 describe('FollowMemberHandler', () => {
   let handler: FollowMemberHandler;
   let connectionRepo: IConnectionRepository;
   let blockRepo: IBlockRepository;
+  let alerts: { create: ReturnType<typeof vi.fn> };
 
   const followerId = 'a1b2c3d4-e5f6-7890-abcd-ef1234567890';
   const followeeId = 'b2c3d4e5-f6a7-8901-bcde-f12345678901';
@@ -43,7 +45,13 @@ describe('FollowMemberHandler', () => {
       isBlocked: vi.fn().mockResolvedValue(false),
     };
 
-    handler = new FollowMemberHandler(connectionRepo, blockRepo);
+    alerts = { create: vi.fn().mockResolvedValue(undefined) };
+
+    handler = new FollowMemberHandler(
+      connectionRepo,
+      blockRepo,
+      alerts as unknown as AlertCreatorService,
+    );
   });
 
   it('should create a follow request successfully', async () => {
@@ -56,6 +64,21 @@ describe('FollowMemberHandler', () => {
     expect(result.followeeId).toBe(followeeId);
     expect(result.status).toBe('PENDING');
     expect(connectionRepo.save).toHaveBeenCalledTimes(1);
+  });
+
+  it('should notify the followee via AlertCreatorService', async () => {
+    const command = new FollowMemberCommand(followerId, followeeId);
+
+    const result = await handler.execute(command);
+
+    expect(alerts.create).toHaveBeenCalledTimes(1);
+    expect(alerts.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        recipientId: followeeId,
+        actorId: followerId,
+        sourceId: result.id,
+      }),
+    );
   });
 
   it('should throw BadRequestException when following yourself', async () => {

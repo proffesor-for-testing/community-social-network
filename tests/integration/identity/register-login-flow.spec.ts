@@ -53,6 +53,7 @@ describe('Identity: Register / Login / Me / Refresh / Logout flow', () => {
     registerHandler = new RegisterMemberHandler(
       repos.memberRepo,
       repos.sessionRepo,
+      repos.profileRepo,
       mockJwt as any,
     );
     loginHandler = new LoginMemberHandler(

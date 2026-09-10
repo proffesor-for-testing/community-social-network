@@ -1,12 +1,14 @@
 import { QueryHandler, IQueryHandler } from '@nestjs/cqrs';
-import { Inject } from '@nestjs/common';
+import { Inject, Optional } from '@nestjs/common';
 import {
   IPublicationRepository,
+  IDiscussionRepository,
 } from '@csn/domain-content';
 import { IProfileRepository } from '@csn/domain-profile';
 import { UserId } from '@csn/domain-shared';
 import { GetFeedQuery } from './get-feed.query';
 import { PostResponseDto } from '../dto/post-response.dto';
+import { ViewerReactionService } from '../services/viewer-reaction.service';
 
 export class FeedResult {
   constructor(
@@ -23,6 +25,10 @@ export class GetFeedHandler implements IQueryHandler<GetFeedQuery, FeedResult> {
     private readonly publicationRepository: IPublicationRepository,
     @Inject('IProfileRepository')
     private readonly profileRepository: IProfileRepository,
+    @Inject('IDiscussionRepository')
+    private readonly discussionRepository: IDiscussionRepository,
+    @Optional()
+    private readonly viewerReactions?: ViewerReactionService,
   ) {}
 
   async execute(query: GetFeedQuery): Promise<FeedResult> {
@@ -52,6 +58,22 @@ export class GetFeedHandler implements IQueryHandler<GetFeedQuery, FeedResult> {
         ? await this.profileRepository.findByMemberIds(uniqueAuthorIds)
         : new Map();
 
+    // Batch-count active comments per post (one GROUP BY query, no N+1).
+    const commentCountByPostId =
+      resultItems.length > 0
+        ? await this.discussionRepository.countActiveByPublicationIds(
+            resultItems.map((p) => p.id),
+          )
+        : new Map<string, number>();
+
+    // Batch-fetch the viewer's own reactions so the FE can render toggle state.
+    const viewerReactionByPostId = this.viewerReactions
+      ? await this.viewerReactions.findByViewer(
+          resultItems.map((p) => p.id.value),
+          query.userId,
+        )
+      : new Map<string, string>();
+
     const items = resultItems.map((pub) => {
       const profile = profileByMemberId.get(pub.authorId.value);
       const author = profile
@@ -60,7 +82,12 @@ export class GetFeedHandler implements IQueryHandler<GetFeedQuery, FeedResult> {
             avatarUrl: null, // Avatar URLs not yet served; placeholder for parity.
           }
         : undefined;
-      return PostResponseDto.fromDomain(pub, undefined, author);
+      return PostResponseDto.fromDomain(
+        pub,
+        commentCountByPostId.get(pub.id.value) ?? 0,
+        author,
+        viewerReactionByPostId.get(pub.id.value) ?? null,
+      );
     });
 
     const nextCursor =

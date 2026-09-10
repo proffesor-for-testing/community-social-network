@@ -122,7 +122,7 @@ export class AuthController {
   @ApiResponse({ status: 401, description: 'Not authenticated' })
   @ApiResponse({ status: 404, description: 'Member not found' })
   async me(@CurrentUser() user: AccessTokenPayload): Promise<MemberResponseDto> {
-    const query = new GetCurrentMemberQuery(user.userId);
+    const query = new GetCurrentMemberQuery(user.userId, user.roles ?? []);
     return this.getCurrentMemberHandler.execute(query);
   }
 }

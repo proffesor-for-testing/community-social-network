@@ -4,11 +4,16 @@ import { FollowMemberHandler } from '../commands/follow-member.handler';
 import { UnfollowMemberHandler } from '../commands/unfollow-member.handler';
 import { ApproveFollowHandler } from '../commands/approve-follow.handler';
 import { RejectFollowHandler } from '../commands/reject-follow.handler';
+import { BlockMemberHandler } from '../commands/block-member.handler';
+import { UnblockMemberHandler } from '../commands/unblock-member.handler';
+import { GetBlocksHandler } from '../queries/get-blocks.handler';
 import { GetFollowersHandler } from '../queries/get-followers.handler';
 import { GetFollowingHandler } from '../queries/get-following.handler';
 import { GetPendingRequestsHandler } from '../queries/get-pending-requests.handler';
 import { ConnectionResponseDto } from '../dto/connection-response.dto';
 import { PaginatedConnectionsDto } from '../dto/paginated-connections.dto';
+import { IConnectionRepository } from '@csn/domain-social-graph';
+import { IProfileRepository } from '@csn/domain-profile';
 
 describe('ConnectionController', () => {
   let controller: ConnectionController;
@@ -16,9 +21,14 @@ describe('ConnectionController', () => {
   let unfollowMemberHandler: UnfollowMemberHandler;
   let approveFollowHandler: ApproveFollowHandler;
   let rejectFollowHandler: RejectFollowHandler;
+  let blockMemberHandler: BlockMemberHandler;
+  let unblockMemberHandler: UnblockMemberHandler;
+  let getBlocksHandler: GetBlocksHandler;
   let getFollowersHandler: GetFollowersHandler;
   let getFollowingHandler: GetFollowingHandler;
   let getPendingRequestsHandler: GetPendingRequestsHandler;
+  let connectionRepository: IConnectionRepository;
+  let profileRepository: IProfileRepository;
 
   const currentUserId = 'a1b2c3d4-e5f6-7890-abcd-ef1234567890';
   const targetUserId = 'b2c3d4e5-f6a7-8901-bcde-f12345678901';
@@ -41,6 +51,18 @@ describe('ConnectionController', () => {
       execute: vi.fn(),
     } as unknown as RejectFollowHandler;
 
+    blockMemberHandler = {
+      execute: vi.fn(),
+    } as unknown as BlockMemberHandler;
+
+    unblockMemberHandler = {
+      execute: vi.fn(),
+    } as unknown as UnblockMemberHandler;
+
+    getBlocksHandler = {
+      execute: vi.fn(),
+    } as unknown as GetBlocksHandler;
+
     getFollowersHandler = {
       execute: vi.fn(),
     } as unknown as GetFollowersHandler;
@@ -53,14 +75,27 @@ describe('ConnectionController', () => {
       execute: vi.fn(),
     } as unknown as GetPendingRequestsHandler;
 
+    connectionRepository = {
+      findByFollowerAndFollowee: vi.fn(),
+    } as unknown as IConnectionRepository;
+
+    profileRepository = {
+      findByMemberIds: vi.fn(async () => new Map()),
+    } as unknown as IProfileRepository;
+
     controller = new ConnectionController(
       followMemberHandler,
       unfollowMemberHandler,
       approveFollowHandler,
       rejectFollowHandler,
+      blockMemberHandler,
+      unblockMemberHandler,
+      getBlocksHandler,
       getFollowersHandler,
       getFollowingHandler,
       getPendingRequestsHandler,
+      connectionRepository,
+      profileRepository,
     );
   });
 
@@ -75,7 +110,7 @@ describe('ConnectionController', () => {
 
       vi.mocked(followMemberHandler.execute).mockResolvedValue(expectedResponse);
 
-      const result = await controller.follow(targetUserId, currentUserId);
+      const result = await controller.follow({ memberId: targetUserId }, currentUserId);
 
       expect(followMemberHandler.execute).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -92,7 +127,7 @@ describe('ConnectionController', () => {
       );
 
       await expect(
-        controller.follow(currentUserId, currentUserId),
+        controller.follow({ memberId: currentUserId }, currentUserId),
       ).rejects.toThrow('Cannot follow yourself');
     });
   });
@@ -112,7 +147,7 @@ describe('ConnectionController', () => {
     });
   });
 
-  describe('approveFollow()', () => {
+  describe('acceptRequest()', () => {
     it('should delegate to ApproveFollowHandler with correct command', async () => {
       const expectedResponse = new ConnectionResponseDto();
       expectedResponse.id = connectionId;
@@ -120,7 +155,7 @@ describe('ConnectionController', () => {
 
       vi.mocked(approveFollowHandler.execute).mockResolvedValue(expectedResponse);
 
-      const result = await controller.approveFollow(connectionId, currentUserId);
+      const result = await controller.acceptRequest(connectionId, currentUserId);
 
       expect(approveFollowHandler.execute).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -132,11 +167,11 @@ describe('ConnectionController', () => {
     });
   });
 
-  describe('rejectFollow()', () => {
+  describe('declineRequest()', () => {
     it('should delegate to RejectFollowHandler with correct command', async () => {
       vi.mocked(rejectFollowHandler.execute).mockResolvedValue(undefined);
 
-      await controller.rejectFollow(connectionId, currentUserId);
+      await controller.declineRequest(connectionId, currentUserId);
 
       expect(rejectFollowHandler.execute).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -147,13 +182,13 @@ describe('ConnectionController', () => {
     });
   });
 
-  describe('getFollowers()', () => {
+  describe('getFollowersOf()', () => {
     it('should delegate to GetFollowersHandler and return paginated result', async () => {
       const expectedResponse = PaginatedConnectionsDto.create([], 0);
 
       vi.mocked(getFollowersHandler.execute).mockResolvedValue(expectedResponse);
 
-      const result = await controller.getFollowers(currentUserId);
+      const result = await controller.getFollowersOf(currentUserId);
 
       expect(getFollowersHandler.execute).toHaveBeenCalledWith(
         expect.objectContaining({ userId: currentUserId }),
@@ -173,7 +208,7 @@ describe('ConnectionController', () => {
 
       vi.mocked(getFollowersHandler.execute).mockResolvedValue(expectedResponse);
 
-      const result = await controller.getFollowers(currentUserId);
+      const result = await controller.getFollowersOf(currentUserId);
 
       expect(result.total).toBe(1);
       expect(result.items).toHaveLength(1);
@@ -181,13 +216,13 @@ describe('ConnectionController', () => {
     });
   });
 
-  describe('getFollowing()', () => {
+  describe('getFollowingOf()', () => {
     it('should delegate to GetFollowingHandler and return paginated result', async () => {
       const expectedResponse = PaginatedConnectionsDto.create([], 0);
 
       vi.mocked(getFollowingHandler.execute).mockResolvedValue(expectedResponse);
 
-      const result = await controller.getFollowing(currentUserId);
+      const result = await controller.getFollowingOf(currentUserId);
 
       expect(getFollowingHandler.execute).toHaveBeenCalledWith(
         expect.objectContaining({ userId: currentUserId }),

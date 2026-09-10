@@ -42,6 +42,7 @@ import {
   MockIdempotencyStore,
   PUBLICATION_REPOSITORY_TOKEN,
   DISCUSSION_REPOSITORY_TOKEN,
+  PROFILE_REPOSITORY_TOKEN,
 } from '../../setup/test-app';
 import { VisibilityEnum } from '@csn/domain-content';
 import { UserId } from '@csn/domain-shared';
@@ -71,6 +72,7 @@ describe('Cross-Context: Block Filters Content', () => {
         GetPostHandler,
         { provide: PUBLICATION_REPOSITORY_TOKEN, useValue: repos.publicationRepo },
         { provide: DISCUSSION_REPOSITORY_TOKEN, useValue: repos.discussionRepo },
+        { provide: PROFILE_REPOSITORY_TOKEN, useValue: repos.profileRepo },
       ],
     }).compile();
 
@@ -88,6 +90,7 @@ describe('Cross-Context: Block Filters Content', () => {
     followHandler = new FollowMemberHandler(
       repos.connectionRepo,
       repos.blockRepo,
+      { create: async () => undefined } as any,
     );
     consumer = new BlockContentFilterConsumer(
       mockIdempotency as any,

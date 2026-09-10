@@ -254,6 +254,7 @@ describe('BaseRepository', () => {
   // -----------------------------------------------------------------------
   describe('save() with existing aggregate (version > 1)', () => {
     it('should use version-conditioned update for version=2', async () => {
+      mockOrm.findOne.mockResolvedValue({ id: 'agg-1', name: 'Alice', version: 1 });
       const aggregate = TestAggregate.reconstitute('agg-1', 'Alice', 1);
       aggregate.rename('Alice Updated');
       expect(aggregate.version).toBe(2);
@@ -272,6 +273,7 @@ describe('BaseRepository', () => {
     });
 
     it('should include the id condition in the WHERE clause', async () => {
+      mockOrm.findOne.mockResolvedValue({ id: 'agg-1', name: 'Alice', version: 2 });
       const aggregate = TestAggregate.reconstitute('agg-1', 'Alice', 2);
       aggregate.rename('Alice v3');
 
@@ -284,14 +286,17 @@ describe('BaseRepository', () => {
       );
     });
 
-    it('should include the version guard in the WHERE clause', async () => {
+    it('should include the version guard in the WHERE clause using the loaded entity version', async () => {
+      // The version guard uses the version read back from the database
+      // (the loaded entity's version), not aggregate.version - 1, since a
+      // handler may bump the in-memory version multiple times before saving.
+      mockOrm.findOne.mockResolvedValue({ id: 'agg-1', name: 'Alice', version: 2 });
       const aggregate = TestAggregate.reconstitute('agg-1', 'Alice', 2);
       aggregate.rename('Alice v3');
       expect(aggregate.version).toBe(3);
 
       await repository.save(aggregate);
 
-      // The version guard checks for previousVersion = currentVersion - 1 = 2
       expect(mockQb.andWhere).toHaveBeenCalledWith(
         '"version" = :previousVersion',
         { previousVersion: 2 },
@@ -299,6 +304,7 @@ describe('BaseRepository', () => {
     });
 
     it('should succeed when affected rows is 1', async () => {
+      mockOrm.findOne.mockResolvedValue({ id: 'agg-1', name: 'Alice', version: 3 });
       mockQb.execute.mockResolvedValue({ affected: 1 });
       const aggregate = TestAggregate.reconstitute('agg-1', 'Alice', 3);
       aggregate.rename('Alice v4');
@@ -306,7 +312,8 @@ describe('BaseRepository', () => {
       await expect(repository.save(aggregate)).resolves.not.toThrow();
     });
 
-    it('should use previousVersion = version - 1 for version=5', async () => {
+    it('should use the loaded entity version as previousVersion', async () => {
+      mockOrm.findOne.mockResolvedValue({ id: 'agg-1', name: 'Alice', version: 4 });
       const aggregate = TestAggregate.reconstitute('agg-1', 'Alice', 4);
       aggregate.rename('Alice v5');
       expect(aggregate.version).toBe(5);
@@ -325,6 +332,7 @@ describe('BaseRepository', () => {
   // -----------------------------------------------------------------------
   describe('save() with version conflict', () => {
     it('should throw OptimisticLockError when affected rows is 0', async () => {
+      mockOrm.findOne.mockResolvedValue({ id: 'agg-1', name: 'Alice', version: 2 });
       mockQb.execute.mockResolvedValue({ affected: 0 });
       const aggregate = TestAggregate.reconstitute('agg-1', 'Alice', 2);
       aggregate.rename('Alice v3');
@@ -335,6 +343,7 @@ describe('BaseRepository', () => {
     });
 
     it('should include aggregate name in the error', async () => {
+      mockOrm.findOne.mockResolvedValue({ id: 'agg-1', name: 'Alice', version: 2 });
       mockQb.execute.mockResolvedValue({ affected: 0 });
       const aggregate = TestAggregate.reconstitute('agg-1', 'Alice', 2);
       aggregate.rename('Alice v3');
@@ -345,6 +354,7 @@ describe('BaseRepository', () => {
     });
 
     it('should include aggregate id in the error', async () => {
+      mockOrm.findOne.mockResolvedValue({ id: 'conflict-id', name: 'Bob', version: 5 });
       mockQb.execute.mockResolvedValue({ affected: 0 });
       const aggregate = TestAggregate.reconstitute('conflict-id', 'Bob', 5);
       aggregate.rename('Bob v6');
@@ -355,6 +365,7 @@ describe('BaseRepository', () => {
     });
 
     it('should throw the correct full error message', async () => {
+      mockOrm.findOne.mockResolvedValue({ id: 'agg-99', name: 'Charlie', version: 3 });
       mockQb.execute.mockResolvedValue({ affected: 0 });
       const aggregate = TestAggregate.reconstitute('agg-99', 'Charlie', 3);
       aggregate.rename('Charlie v4');
@@ -370,17 +381,26 @@ describe('BaseRepository', () => {
   // save - atomic guarantee
   // -----------------------------------------------------------------------
   describe('save() atomicity', () => {
-    it('should NOT call a separate findOne before update (no read-then-write)', async () => {
+    it('should call findOne exactly once to check existence/version, selecting only the version column', async () => {
+      mockOrm.findOne.mockResolvedValue({ id: 'agg-1', name: 'Alice', version: 2 });
       const aggregate = TestAggregate.reconstitute('agg-1', 'Alice', 2);
       aggregate.rename('Alice v3');
 
       await repository.save(aggregate);
 
-      // findOne should NOT have been called -- the update is atomic via WHERE
-      expect(mockOrm.findOne).not.toHaveBeenCalled();
+      // A single lightweight findOne (select: ['version']) determines
+      // insert-vs-update; the subsequent UPDATE is still atomic because it
+      // is guarded by a WHERE version = previousVersion clause, so there is
+      // no read-then-write race on the actual persisted state.
+      expect(mockOrm.findOne).toHaveBeenCalledOnce();
+      expect(mockOrm.findOne).toHaveBeenCalledWith({
+        where: { id: 'agg-1' },
+        select: ['version'],
+      });
     });
 
     it('should call query builder methods in correct order', async () => {
+      mockOrm.findOne.mockResolvedValue({ id: 'agg-1', name: 'Alice', version: 2 });
       const callOrder: string[] = [];
       mockQb.update.mockImplementation(() => {
         callOrder.push('update');
@@ -453,6 +473,8 @@ describe('BaseRepository', () => {
       // Reconstitute at version 2 without incrementing -- simulates an
       // aggregate loaded from the DB at version 2 that is being saved as-is
       // (e.g., after only pulling domain events but not modifying state).
+      // The row currently in the database is at version 1.
+      mockOrm.findOne.mockResolvedValue({ id: 'agg-1', name: 'Alice', version: 1 });
       const aggregate = TestAggregate.reconstitute('agg-1', 'Alice', 2);
 
       await repository.save(aggregate);
@@ -474,6 +496,7 @@ describe('BaseRepository', () => {
     });
 
     it('should propagate query builder execute errors for existing aggregates', async () => {
+      mockOrm.findOne.mockResolvedValue({ id: 'agg-1', name: 'Alice', version: 3 });
       mockQb.execute.mockRejectedValue(new Error('Query timeout'));
       const aggregate = TestAggregate.reconstitute('agg-1', 'Alice', 3);
       aggregate.rename('Alice v4');

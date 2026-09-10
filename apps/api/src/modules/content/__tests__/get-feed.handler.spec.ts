@@ -35,6 +35,15 @@ class StubPublicationRepo {
   }
 }
 
+class StubDiscussionRepo {
+  public calls: string[][] = [];
+  constructor(private readonly counts: Map<string, number> = new Map()) {}
+  async countActiveByPublicationIds(ids: PublicationId[]): Promise<Map<string, number>> {
+    this.calls.push(ids.map((i) => i.value));
+    return this.counts;
+  }
+}
+
 class StubProfileRepo {
   public calls: UserId[][] = [];
   constructor(private readonly profiles: Map<string, Profile>) {}
@@ -71,6 +80,7 @@ describe('GetFeedHandler — author enrichment', () => {
     const handler = new GetFeedHandler(
       new StubPublicationRepo(posts) as never,
       new StubProfileRepo(profiles) as never,
+      new StubDiscussionRepo() as never,
     );
 
     // Act
@@ -89,6 +99,7 @@ describe('GetFeedHandler — author enrichment', () => {
     const handler = new GetFeedHandler(
       new StubPublicationRepo(posts) as never,
       new StubProfileRepo(profiles) as never,
+      new StubDiscussionRepo() as never,
     );
 
     // Act
@@ -111,6 +122,7 @@ describe('GetFeedHandler — author enrichment', () => {
     const handler = new GetFeedHandler(
       new StubPublicationRepo(allPosts) as never,
       profileRepo as never,
+      new StubDiscussionRepo() as never,
     );
 
     // Act
@@ -131,6 +143,7 @@ describe('GetFeedHandler — author enrichment', () => {
     const handler = new GetFeedHandler(
       new StubPublicationRepo(sameAuthorPosts) as never,
       profileRepo as never,
+      new StubDiscussionRepo() as never,
     );
 
     // Act
@@ -146,6 +159,7 @@ describe('GetFeedHandler — author enrichment', () => {
     const handler = new GetFeedHandler(
       new StubPublicationRepo([]) as never,
       profileRepo as never,
+      new StubDiscussionRepo() as never,
     );
 
     // Act
@@ -169,6 +183,7 @@ describe('GetFeedHandler — author enrichment', () => {
     const handler = new GetFeedHandler(
       new StubPublicationRepo(allPosts) as never,
       new StubProfileRepo(profiles) as never,
+      new StubDiscussionRepo() as never,
     );
 
     // Act
@@ -178,5 +193,122 @@ describe('GetFeedHandler — author enrichment', () => {
     expect(result.hasMore).toBe(true);
     expect(typeof result.nextCursor).toBe('string');
     expect(result.nextCursor).toBe(id2.value);
+  });
+
+  describe('viewerReaction enrichment', () => {
+    class StubViewerReactions {
+      public calls: { ids: string[]; viewer?: string | null }[] = [];
+      constructor(private readonly map: Map<string, string>) {}
+      async findByViewer(ids: string[], viewer?: string | null): Promise<Map<string, string>> {
+        this.calls.push({ ids, viewer });
+        return this.map;
+      }
+    }
+
+    it('should set viewerReaction from the viewer lookup for each post', async () => {
+      // Arrange
+      const p1 = Publication.create(PublicationId.generate(), alice, PublicationContent.create('1'), Visibility.PUBLIC);
+      const p2 = Publication.create(PublicationId.generate(), alice, PublicationContent.create('2'), Visibility.PUBLIC);
+      const lookup = new StubViewerReactions(new Map([[p1.id.value, 'LIKE']]));
+      const handler = new GetFeedHandler(
+        new StubPublicationRepo([p1, p2]) as never,
+        new StubProfileRepo(profiles) as never,
+        new StubDiscussionRepo() as never,
+        lookup as never,
+      );
+
+      // Act
+      const result = await handler.execute(new GetFeedQuery('viewer-1'));
+
+      // Assert
+      expect(result.items.map((i) => i.viewerReaction)).toEqual(['LIKE', null]);
+    });
+
+    it('should look up viewer reactions once for the whole page, scoped to the requesting user', async () => {
+      // Arrange
+      const lookup = new StubViewerReactions(new Map());
+      const handler = new GetFeedHandler(
+        new StubPublicationRepo(posts) as never,
+        new StubProfileRepo(profiles) as never,
+        new StubDiscussionRepo() as never,
+        lookup as never,
+      );
+
+      // Act
+      await handler.execute(new GetFeedQuery('viewer-1'));
+
+      // Assert
+      expect(lookup.calls).toHaveLength(1);
+      expect(lookup.calls[0]!.viewer).toBe('viewer-1');
+      expect(lookup.calls[0]!.ids).toEqual(posts.map((p) => p.id.value));
+    });
+
+    it('should default viewerReaction to null when the lookup service is not wired', async () => {
+      // Arrange
+      const handler = new GetFeedHandler(
+        new StubPublicationRepo(posts) as never,
+        new StubProfileRepo(profiles) as never,
+      new StubDiscussionRepo() as never,
+      );
+
+      // Act
+      const result = await handler.execute(new GetFeedQuery('viewer-1'));
+
+      // Assert
+      expect(result.items.every((i) => i.viewerReaction === null)).toBe(true);
+    });
+  });
+
+  describe('commentCount enrichment', () => {
+    it('should set commentCount from the batched active-comment count', async () => {
+      // Arrange
+      const p1 = Publication.create(PublicationId.generate(), alice, PublicationContent.create('1'), Visibility.PUBLIC);
+      const p2 = Publication.create(PublicationId.generate(), alice, PublicationContent.create('2'), Visibility.PUBLIC);
+      const discussions = new StubDiscussionRepo(new Map([[p1.id.value, 3]]));
+      const handler = new GetFeedHandler(
+        new StubPublicationRepo([p1, p2]) as never,
+        new StubProfileRepo(profiles) as never,
+        discussions as never,
+      );
+
+      // Act
+      const result = await handler.execute(new GetFeedQuery('viewer-1'));
+
+      // Assert
+      expect(result.items.map((i) => i.commentCount)).toEqual([3, 0]);
+    });
+
+    it('should count comments once for the whole page (no N+1)', async () => {
+      // Arrange
+      const discussions = new StubDiscussionRepo();
+      const handler = new GetFeedHandler(
+        new StubPublicationRepo(posts) as never,
+        new StubProfileRepo(profiles) as never,
+        discussions as never,
+      );
+
+      // Act
+      await handler.execute(new GetFeedQuery('viewer-1'));
+
+      // Assert
+      expect(discussions.calls).toHaveLength(1);
+      expect(discussions.calls[0]).toEqual(posts.map((p) => p.id.value));
+    });
+
+    it('should not query comment counts for an empty page', async () => {
+      // Arrange
+      const discussions = new StubDiscussionRepo();
+      const handler = new GetFeedHandler(
+        new StubPublicationRepo([]) as never,
+        new StubProfileRepo(profiles) as never,
+        discussions as never,
+      );
+
+      // Act
+      await handler.execute(new GetFeedQuery('viewer-1'));
+
+      // Assert
+      expect(discussions.calls).toHaveLength(0);
+    });
   });
 });

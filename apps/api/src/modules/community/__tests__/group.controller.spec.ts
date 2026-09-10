@@ -13,6 +13,7 @@ import {
   MembershipRole,
 } from '@csn/domain-community';
 import { AccessTokenPayload } from '@csn/infra-auth';
+import { IProfileRepository } from '@csn/domain-profile';
 import { GroupController } from '../controllers/group.controller';
 import { CreateGroupHandler } from '../commands/create-group.handler';
 import { UpdateGroupHandler } from '../commands/update-group.handler';
@@ -87,6 +88,7 @@ describe('GroupController', () => {
   let getGroupHandler: { execute: ReturnType<typeof vi.fn> };
   let getGroupMembersHandler: { execute: ReturnType<typeof vi.fn> };
   let searchGroupsHandler: { execute: ReturnType<typeof vi.fn> };
+  let profileRepository: { findByMemberIds: ReturnType<typeof vi.fn> };
 
   beforeEach(() => {
     createGroupHandler = { execute: vi.fn() };
@@ -99,6 +101,7 @@ describe('GroupController', () => {
     getGroupHandler = { execute: vi.fn() };
     getGroupMembersHandler = { execute: vi.fn() };
     searchGroupsHandler = { execute: vi.fn() };
+    profileRepository = { findByMemberIds: vi.fn(async () => new Map()) };
 
     controller = new GroupController(
       createGroupHandler as unknown as CreateGroupHandler,
@@ -111,6 +114,7 @@ describe('GroupController', () => {
       getGroupHandler as unknown as GetGroupHandler,
       getGroupMembersHandler as unknown as GetGroupMembersHandler,
       searchGroupsHandler as unknown as SearchGroupsHandler,
+      profileRepository as unknown as IProfileRepository,
     );
   });
 

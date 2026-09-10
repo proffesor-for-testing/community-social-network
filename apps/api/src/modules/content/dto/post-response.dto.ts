@@ -32,6 +32,13 @@ export class PostResponseDto {
   @ApiPropertyOptional({ description: 'Number of comments on this post', example: 3 })
   commentCount?: number;
 
+  @ApiPropertyOptional({
+    description: "The viewing user's own reaction type on this post, or null",
+    example: 'LIKE',
+    nullable: true,
+  })
+  viewerReaction!: string | null;
+
   @ApiProperty({ description: 'Post creation timestamp', example: '2024-01-01T00:00:00.000Z' })
   createdAt!: string;
 
@@ -42,6 +49,7 @@ export class PostResponseDto {
     publication: Publication,
     commentCount?: number,
     author?: { displayName?: string; avatarUrl?: string | null },
+    viewerReaction: string | null = null,
   ): PostResponseDto {
     const dto = new PostResponseDto();
     dto.id = publication.id.value;
@@ -59,6 +67,7 @@ export class PostResponseDto {
     dto.reactionCounts = counts;
 
     dto.commentCount = commentCount;
+    dto.viewerReaction = viewerReaction;
     dto.createdAt = publication.createdAt.value.toISOString();
     dto.updatedAt = publication.updatedAt.value.toISOString();
     return dto;

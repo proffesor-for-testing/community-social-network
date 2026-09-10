@@ -45,10 +45,19 @@ describe('Cross-Context: Notification on Follow', () => {
     repos = createTestRepositories();
     mockIdempotency = new MockIdempotencyStore();
 
-    // Direct instantiation to avoid NestJS DI class-token issues
+    // Direct instantiation to avoid NestJS DI class-token issues.
+    //
+    // FollowMemberHandler now sends its own best-effort "follow request"
+    // alert synchronously via AlertCreatorService (see follow-member.handler.ts).
+    // That path is already covered by follow-member.handler.spec.ts. This
+    // suite exercises the *separate* NotificationTriggerConsumer cross-context
+    // path in isolation, so the handler here gets a no-op alerts stub to avoid
+    // double-counting alerts when a test drives both the handler and the
+    // consumer for the same simulated event.
     followHandler = new FollowMemberHandler(
       repos.connectionRepo,
       repos.blockRepo,
+      { create: async () => undefined } as any,
     );
     notificationConsumer = new NotificationTriggerConsumer(
       repos.alertRepo,

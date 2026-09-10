@@ -79,8 +79,13 @@ export class PostController {
   @ApiResponse({ status: 404, description: 'Post not found' })
   async getPost(
     @Param('id', ParseUUIDPipe) id: string,
+    @CurrentUser() user?: AccessTokenPayload,
   ): Promise<PostResponseDto> {
-    return this.queryBus.execute<GetPostQuery, PostResponseDto>(new GetPostQuery(id));
+    // Route is @Public, but the guard attaches the user when a valid token is
+    // present so the viewer's own reaction can be resolved.
+    return this.queryBus.execute<GetPostQuery, PostResponseDto>(
+      new GetPostQuery(id, user?.userId),
+    );
   }
 
   @Put('api/publications/:id')

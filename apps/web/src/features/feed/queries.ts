@@ -34,9 +34,31 @@ type ApiPostResponse = {
   status: string;
   reactionCounts?: Record<string, number>;
   commentCount?: number;
+  viewerReaction?: string | null;
   createdAt: string;
   updatedAt: string;
 };
+
+export type ReactionType = 'like' | 'love' | 'laugh' | 'wow' | 'sad' | 'angry';
+
+const API_REACTION_TYPE: Record<ReactionType, string> = {
+  like: 'LIKE',
+  love: 'LOVE',
+  laugh: 'HAHA',
+  wow: 'WOW',
+  sad: 'SAD',
+  angry: 'ANGRY',
+};
+
+const FE_REACTION_TYPE: Record<string, ReactionType> = Object.fromEntries(
+  Object.entries(API_REACTION_TYPE).map(([fe, api]) => [api, fe as ReactionType]),
+);
+
+/** Map the API's enum ('LIKE', 'HAHA', …) to the FE union; unknown/null → null. */
+export function adaptViewerReaction(value: string | null | undefined): ReactionType | null {
+  if (!value) return null;
+  return FE_REACTION_TYPE[value.toUpperCase()] ?? null;
+}
 
 export function adaptPost(p: ApiPostResponse): PublicationDto {
   const reactionCount = p.reactionCounts
@@ -54,6 +76,7 @@ export function adaptPost(p: ApiPostResponse): PublicationDto {
     tags: [],
     reactionCount,
     commentCount: p.commentCount ?? 0,
+    viewerReaction: adaptViewerReaction(p.viewerReaction),
     createdAt: p.createdAt,
     updatedAt: p.updatedAt,
   };
@@ -92,21 +115,10 @@ export async function deletePublication(id: string): Promise<void> {
   await apiClient.delete(`/publications/${id}`);
 }
 
-export type ReactionType = 'like' | 'love' | 'laugh' | 'wow' | 'sad' | 'angry';
-
 export interface ReactionDto {
   publicationId: string;
   type: ReactionType;
 }
-
-const API_REACTION_TYPE: Record<ReactionType, string> = {
-  like: 'LIKE',
-  love: 'LOVE',
-  laugh: 'HAHA',
-  wow: 'WOW',
-  sad: 'SAD',
-  angry: 'ANGRY',
-};
 
 export async function addReaction(publicationId: string, type: ReactionType): Promise<void> {
   await apiClient.post(`/publications/${publicationId}/reactions`, {
@@ -114,7 +126,7 @@ export async function addReaction(publicationId: string, type: ReactionType): Pr
   });
 }
 
-export async function removeReaction(publicationId: string, type: ReactionType = 'like'): Promise<void> {
+export async function removeReaction(publicationId: string, type: ReactionType): Promise<void> {
   await apiClient.delete(`/publications/${publicationId}/reactions`, {
     data: { reactionType: API_REACTION_TYPE[type] },
   });

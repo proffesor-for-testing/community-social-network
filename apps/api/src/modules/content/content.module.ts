@@ -2,6 +2,7 @@ import { Module } from '@nestjs/common';
 import { CqrsModule } from '@nestjs/cqrs';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { ContentInfrastructureModule, ReactionEntity } from '@csn/infra-content';
+import { ViewerReactionService } from './services/viewer-reaction.service';
 import { ProfileInfrastructureModule } from '@csn/infra-profile';
 import { NotificationModule } from '../notification/notification.module';
 
@@ -48,6 +49,6 @@ const QueryHandlers = [
     TypeOrmModule.forFeature([ReactionEntity]),
   ],
   controllers: [PostController, CommentController, ReactionController],
-  providers: [...CommandHandlers, ...QueryHandlers],
+  providers: [...CommandHandlers, ...QueryHandlers, ViewerReactionService],
 })
 export class ContentModule {}

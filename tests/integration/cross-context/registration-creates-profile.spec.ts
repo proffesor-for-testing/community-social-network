@@ -48,6 +48,7 @@ describe('Cross-Context: Registration Creates Profile', () => {
     registerHandler = new RegisterMemberHandler(
       repos.memberRepo,
       repos.sessionRepo,
+      repos.profileRepo,
       new MockJwtTokenService() as any,
     );
     profileConsumer = new ProfileCreatorConsumer(
@@ -121,21 +122,19 @@ describe('Cross-Context: Registration Creates Profile', () => {
   // ── Consumer skips if profile already exists ──────────────────────────
 
   it('should skip profile creation if profile already exists for member', async () => {
+    // RegisterMemberHandler now creates the companion Profile synchronously
+    // as part of registration (see register-member.handler.ts), so by the
+    // time the MemberRegistered event reaches the consumer a profile for
+    // this member already exists. The consumer must detect that and skip
+    // creating a second one rather than relying solely on event-id
+    // idempotency.
     const regResult = await registerHandler.execute(
       new RegisterMemberCommand('dave@test.com', 'Dave Profile', 'Str0ng!Pass#2024'),
     );
+    expect(repos.profileRepo.size).toBe(1);
 
-    // Manually create a profile first
-    const { Profile, ProfileId, DisplayName } = await import('@csn/domain-profile');
-    const { Email } = await import('@csn/domain-shared');
-    const profileId = ProfileId.generate();
-    const memberId = UserId.create(regResult.member.id);
-    const displayName = DisplayName.create('Dave Profile');
-    const email = Email.create('dave@test.com');
-    const existingProfile = Profile.create(profileId, memberId, displayName, email);
-    await repos.profileRepo.save(existingProfile);
-
-    // Now send the event with a different event ID (so idempotency won't skip it)
+    // Send the event with a fresh event ID (so idempotency-store dedup
+    // alone would not be what prevents a duplicate).
     const eventPayload = {
       type: 'MemberRegistered',
       eventId: randomUUID(),

@@ -104,7 +104,11 @@ export function PostDetail() {
         )}
 
         <div className="border-t border-gray-100 pt-3 dark:border-gray-700">
-          <ReactionBar publicationId={post.id} reactionCount={post.reactionCount} />
+          <ReactionBar
+          publicationId={post.id}
+          reactionCount={post.reactionCount}
+          viewerReaction={post.viewerReaction}
+        />
         </div>
       </article>
 
